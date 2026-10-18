@@ -31,6 +31,10 @@ else
     builder.Services.AddSingleton<IGoldStore>(new LocalJsonGoldStore(full));
 }
 
+var handoverPath = builder.Configuration["LinePulse:HandoverFile"] ?? "../../local_data/export/gold_handover.json";
+builder.Services.AddSingleton(new HandoverFile(
+    Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, handoverPath))));
+
 var app = builder.Build();
 app.UseExceptionHandler(e => e.Run(async ctx =>
 {
@@ -87,6 +91,8 @@ api.MapGet("/signals/{lineId}/{signal}", async (string lineId, string signal, in
         return Results.BadRequest(new { error = $"signal must be one of {string.Join(", ", signals)}" });
     return Results.Ok(await s.GetSignalAsync(lineId, signal, Math.Clamp(minutes ?? 180, 10, 1440), ct));
 });
+
+api.MapGet("/handover", async (HandoverFile f, CancellationToken ct) => Results.Ok(await f.ReadAsync(ct)));
 
 api.MapGet("/data-quality", async (IGoldStore s, CancellationToken ct) => Results.Ok(await s.GetDataQualityAsync(ct)));
 

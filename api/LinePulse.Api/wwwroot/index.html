@@ -4,148 +4,224 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LinePulse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --page: #f9f9f7; --surface: #fcfcfb; --border: #e4e3de; --grid: #ecebe6;
-    --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #77766f;
-    --series: #2a78d6; --band: rgba(42,120,214,.08);
-    --good: #0ca30c; --warning: #b37a00; --critical: #d03b3b;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bg: #f6f7f5;        /* flour */
+    --surface: #ffffff;
+    --ink: #1e2a2f;       /* oven steel */
+    --ink-2: #536269;
+    --ink-3: #7d8a90;
+    --rule: #e2e6e3;
+    --accent: #0e6e6b;    /* line teal: interactive + the handover */
+    --accent-soft: #e3f1f0;
+    --ok: #2f7d4e;
+    --warn: #9a5b00;
+    --bad: #b42318;
+    --bad-soft: #fbe9e7;
+    --series: #2a78d6;
+    --band: rgba(42,120,214,.08);
+    --grid: #eceeec;
+    --font: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-num: "Barlow Semi Condensed", "Barlow", system-ui, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --page: #0d0d0d; --surface: #1a1a19; --border: #2f2f2c; --grid: #2a2a27;
-      --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #94938b;
-      --series: #3987e5; --band: rgba(57,135,229,.14);
-      --good: #2fbf2f; --warning: #fab219; --critical: #e66767;
+      --bg: #121719; --surface: #1a2124; --ink: #e8ecea; --ink-2: #a9b4b9; --ink-3: #7f8b91;
+      --rule: #2a3336; --accent: #55b8b2; --accent-soft: #173533; --ok: #5cc28a; --warn: #f0b04a;
+      --bad: #f07a6c; --bad-soft: #3a1f1c; --series: #3987e5; --band: rgba(57,135,229,.14); --grid: #222b2e;
     }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--page); color: var(--ink);
-         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
-           padding: 20px 24px 8px; max-width: 1180px; margin: 0 auto; }
-  header h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
-  header .meta { color: var(--ink-2); font-size: 13px; }
-  header .badge { font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em;
-                  border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px; color: var(--ink-2); }
-  main { max-width: 1180px; margin: 0 auto; padding: 8px 24px 40px; display: grid; gap: 16px; }
-  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-  .panel h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--ink-2);
-              text-transform: uppercase; letter-spacing: .05em; }
-  .lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-  .line-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .line-head strong { font-size: 16px; }
-  .line-head .sku { color: var(--ink-2); font-size: 12px; }
-  .pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;
-          padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; }
-  .pill.OK { color: var(--good); } .pill.WARN { color: var(--warning); } .pill.ALERT { color: var(--critical); }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 12px; margin-top: 14px; }
-  .stat .k { color: var(--ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
-  .stat .v { font: 600 17px/1.2 var(--mono); }
-  .stat .v small { font-weight: 400; color: var(--ink-2); font-size: 12px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; color: var(--ink-3); font-weight: 600; font-size: 11px; text-transform: uppercase;
-       letter-spacing: .04em; padding: 6px 8px; border-bottom: 1px solid var(--border); }
-  td { padding: 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
-  td.num, th.num { text-align: right; font-family: var(--mono); }
-  tr.pick { cursor: pointer; } tr.pick:hover td { background: var(--band); }
-  tr.sel td { background: var(--band); }
-  .lots { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
-  .scroll { overflow-x: auto; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font); }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  @media (max-width: 600px) { .wrap { padding: 0 16px; } }
+
+  .top { border-bottom: 1px solid var(--rule); background: var(--surface); }
+  .top .wrap { display: flex; align-items: baseline; gap: 16px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+  .brand { font-weight: 600; font-size: 18px; letter-spacing: -.01em; }
+  .top .meta { color: var(--ink-2); font-size: 14px; }
+  .top .mode { margin-left: auto; font-size: 13px; color: var(--ink-2); }
+
+  .snapshot { color: var(--ink-2); font-size: 14px; padding-top: 14px; }
+  .hero { padding: 28px 0 8px; }
+  .hero h1 { font-size: 34px; line-height: 1.15; font-weight: 600; margin: 0 0 6px; letter-spacing: -.015em; max-width: 26ch; }
+  .hero h1.attn { color: var(--bad); }
+  .hero p { margin: 0; color: var(--ink-2); max-width: 70ch; }
+
+  section { margin-top: 32px; }
+  h2 { font-size: 20px; font-weight: 600; margin: 0 0 12px; }
+  .note-s { color: var(--ink-3); font-size: 14px; margin: 8px 0 0; }
+
+  /* The handover: the one bold element */
+  .handover { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 6px; padding: 20px 24px; }
+  .handover-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .handover-head h2 { margin: 0; }
+  .tabs { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+  .tabs button { font: inherit; font-size: 14px; background: none; border: 0; padding: 4px 12px; color: var(--ink-2); cursor: pointer; }
+  .tabs button + button { border-left: 1px solid var(--rule); }
+  .tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 500; }
+  .checked { margin-left: auto; font-size: 14px; color: var(--ok); }
+  .checked.bad { color: var(--bad); }
+  .note { font-size: 17px; line-height: 1.6; max-width: 72ch; }
+  .note p { margin: 0 0 10px; }
+  .note ul { margin: 0 0 12px; padding-left: 20px; }
+  .note li { margin: 2px 0; }
+  .fig { text-decoration: underline dotted; text-decoration-color: var(--ok); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+  .fig.bad { text-decoration: underline solid; text-decoration-color: var(--bad); background: var(--bad-soft); }
+  .handover details { margin-top: 10px; font-size: 14px; color: var(--ink-2); }
+  .handover summary { cursor: pointer; color: var(--accent); }
+  .handover ol { margin: 8px 0 0; padding-left: 20px; }
+  .handover code { font-size: 13px; }
+
+  /* Lines */
+  .rows { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+  .row { display: grid; grid-template-columns: 56px 1fr auto auto auto; grid-template-areas: "id prod k1 k2 st";
+         gap: 8px 24px; align-items: center; padding: 14px 20px; }
+  .row + .row { border-top: 1px solid var(--rule); }
+  .row .id { grid-area: id; font-weight: 600; font-size: 18px; }
+  .row .product { grid-area: prod; color: var(--ink-2); }
+  .row .k1 { grid-area: k1; } .row .k2 { grid-area: k2; } .row .status { grid-area: st; justify-self: end; }
+  .kv { text-align: right; }
+  .kv b { display: block; font: 600 20px/1.1 var(--font-num); font-variant-numeric: tabular-nums; }
+  .kv span { font-size: 13px; color: var(--ink-3); }
+  .status { font-size: 14px; font-weight: 500; padding: 2px 10px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+  .status.OK { color: var(--ok); } .status.WARN { color: var(--warn); } .status.ALERT { color: var(--bad); }
+  @media (max-width: 640px) {
+    .row { grid-template-columns: 36px 1fr auto; grid-template-areas: "id prod st" ". k1 k2"; gap: 8px 16px; padding: 14px 16px; }
+    .kv { text-align: left; }
+    .tabs .hrs { display: none; }
+    .checked { margin-left: 0; width: 100%; }
+  }
+
+  /* Alerts */
+  .events { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+  .events li + li { border-top: 1px solid var(--rule); }
+  .events button { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 112px 1fr; gap: 4px 16px; width: 100%; padding: 14px 20px; cursor: pointer; }
+  .events button:hover, .events button[aria-pressed="true"] { background: var(--accent-soft); }
+  .events button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .events .when { font: 600 17px var(--font-num); font-variant-numeric: tabular-nums; }
+  .events .what { font-weight: 500; }
+  .events .detail { grid-column: 2; color: var(--ink-2); font-size: 14px; }
+  .empty { padding: 16px 20px; color: var(--ink-2); }
+  @media (max-width: 600px) { .events button { grid-template-columns: 1fr; } .events .detail { grid-column: 1; } }
+
+  /* Chart */
+  .chart-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 20px 12px; margin-top: 12px; }
   .chart-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
   .chart-head .t { font-weight: 600; }
-  .chart-head .s { color: var(--ink-2); font-size: 12px; }
+  .chart-head .s { color: var(--ink-2); font-size: 14px; }
   .controls { display: flex; gap: 8px; flex-wrap: wrap; }
-  select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
-           border-radius: 6px; padding: 4px 8px; }
+  select { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 4px 8px; }
   #chart { position: relative; margin-top: 8px; }
-  #chart svg { display: block; width: 100%; height: 260px; }
-  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
-         border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
-         white-space: nowrap; display: none; }
-  .legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-2); font-size: 12px; margin-top: 6px; }
+  #chart svg { display: block; width: 100%; height: 240px; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 8px; font-size: 13px; white-space: nowrap; display: none; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-2); font-size: 13px; margin-top: 4px; }
   .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 6px; }
-  .grid2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-  @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
-  main > *, .grid2 > *, .lines > * { min-width: 0; }
-  @media (max-width: 600px) {
-    header, main { padding-left: 16px; padding-right: 16px; }
-    .stats { grid-template-columns: repeat(2, 1fr); }
-  }
-  .snapshot { max-width: 1180px; margin: 0 auto 4px; padding: 0 24px; color: var(--ink-2); font-size: 13px; }
-  .snapshot b { color: var(--ink); }
-  .snapshot a { color: var(--series); }
-  @media (max-width: 600px) { .snapshot { padding: 0 16px; } }
-  .err { color: var(--critical); font-family: var(--mono); font-size: 13px; white-space: pre-wrap; }
-  .note { color: var(--ink-3); font-size: 12px; margin-top: 8px; }
+
+  /* Shift table */
+  .table-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th { text-align: left; color: var(--ink-2); font-weight: 500; font-size: 14px; padding: 10px 16px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  .num { text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+  .more { display: none; }
+  .show-more .more { display: table-cell; }
+  .toggle { font: inherit; font-size: 14px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; margin-top: 8px; }
+
+  footer { margin: 40px 0 48px; color: var(--ink-3); font-size: 14px; }
+  .err { color: var(--bad); margin-top: 16px; white-space: pre-wrap; }
 </style>
 </head>
 <body>
-<header>
-  <h1>LinePulse</h1>
-  <span class="badge" id="mode">…</span>
-  <span class="meta" id="asof">Loading gold tables…</span>
-</header>
-<div id="snapshot" class="snapshot" hidden></div>
-<main>
+<div class="top"><div class="wrap">
+  <span class="brand">LinePulse</span>
+  <span class="meta" id="asof">Loading…</span>
+  <span class="mode" id="mode"></span>
+</div></div>
+
+<main class="wrap">
+  <div id="snapshot" class="snapshot" hidden></div>
   <div id="error" class="err" hidden></div>
-  <section class="lines" id="lines"></section>
 
-  <section class="panel">
-    <div class="chart-head">
-      <div><div class="t" id="chart-title">Signal</div>
-        <div class="s" id="chart-sub">Per-minute mean, EWMA deviation and alert threshold</div></div>
-      <div class="controls">
-        <select id="sel-line" aria-label="Line"></select>
-        <select id="sel-signal" aria-label="Signal">
-          <option value="oven_z1_c">Oven zone 1 (°C)</option>
-          <option value="oven_z2_c">Oven zone 2 (°C)</option>
-          <option value="oven_z3_c">Oven zone 3 (°C)</option>
-          <option value="fill_weight_g">Fill weight (g)</option>
-        </select>
-        <select id="sel-window" aria-label="Time window">
-          <option value="120">Last 2 h</option><option value="240">Last 4 h</option>
-          <option value="480" selected>Last 8 h</option><option value="1440">Last 24 h</option>
-        </select>
-      </div>
-    </div>
-    <div id="chart"><div class="tip" id="tip"></div></div>
-    <div class="legend">
-      <span><i style="background:var(--series)"></i>Per-minute mean</span>
-      <span><i style="background:var(--ink-3)"></i>Setpoint</span>
-      <span><i style="background:var(--band);height:10px"></i>Setpoint ± alert threshold</span>
-      <span><i style="background:var(--critical);height:6px;border-radius:3px"></i>Over threshold (EWMA)</span>
-    </div>
-  </section>
-
-  <div class="grid2">
-    <section class="panel">
-      <h2>Drift alerts</h2>
-      <div class="scroll"><table id="alerts"></table></div>
-      <p class="note">Click an alert to chart its signal. Lots are every lot produced while the excursion lasted.</p>
-    </section>
-    <section class="panel">
-      <h2>Data quality (quarantined)</h2>
-      <table id="dq"></table>
-      <p class="note">Records failing a rule are kept in silver_quarantine with the rule names, never dropped.</p>
-    </section>
+  <div class="hero">
+    <h1 id="headline">Checking the lines…</h1>
+    <p id="subline"></p>
   </div>
 
-  <section class="panel">
-    <h2>Shift KPIs</h2>
-    <div class="scroll"><table id="shifts"></table></div>
-    <p class="note">Giveaway = accepted weight above the 90 g label. Cost uses an illustrative CAD 2.50/kg.</p>
+  <section id="handover-section" hidden>
+    <div class="handover">
+      <div class="handover-head">
+        <h2>Shift handover</h2>
+        <div class="tabs" role="tablist" id="shift-tabs"></div>
+        <span class="checked" id="checked"></span>
+      </div>
+      <div class="note" id="note"></div>
+      <details id="how">
+        <summary>How this note was written and checked</summary>
+        <div id="how-body"></div>
+      </details>
+    </div>
   </section>
+
+  <section>
+    <h2>Lines</h2>
+    <div class="rows" id="lines"></div>
+  </section>
+
+  <section>
+    <h2>Drift alerts</h2>
+    <ul class="events" id="alerts"></ul>
+    <div class="chart-box">
+      <div class="chart-head">
+        <div><div class="t" id="chart-title">Signal</div><div class="s" id="chart-sub"></div></div>
+        <div class="controls">
+          <select id="sel-line" aria-label="Line"></select>
+          <select id="sel-signal" aria-label="Signal">
+            <option value="oven_z1_c">Oven zone 1 (°C)</option>
+            <option value="oven_z2_c">Oven zone 2 (°C)</option>
+            <option value="oven_z3_c">Oven zone 3 (°C)</option>
+            <option value="fill_weight_g">Fill weight (g)</option>
+          </select>
+          <select id="sel-window" aria-label="Time window">
+            <option value="120">Last 2 h</option><option value="240">Last 4 h</option>
+            <option value="480" selected>Last 8 h</option><option value="1440">Last 24 h</option>
+          </select>
+        </div>
+      </div>
+      <div id="chart"><div class="tip" id="tip"></div></div>
+      <div class="legend">
+        <span><i style="background:var(--series)"></i>Per-minute average</span>
+        <span><i style="background:var(--ink-3)"></i>Setpoint</span>
+        <span><i style="background:var(--band);height:10px"></i>Normal range</span>
+        <span><i style="background:var(--bad);height:6px;border-radius:3px"></i>Drifting</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Shift results</h2>
+    <div class="table-box" id="shift-box"><table id="shifts"></table></div>
+    <button class="toggle" id="toggle-more" aria-expanded="false">Show reject and weight detail</button>
+  </section>
+
+  <footer id="dq"></footer>
 </main>
 
 <script>
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? "–").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const fmt = (v, d = 1) => v == null ? "–" : Number(v).toLocaleString(undefined, {minimumFractionDigits: d, maximumFractionDigits: d});
+const fmt = (v, d = 1) => v == null ? "–" : Number(v).toLocaleString("en-CA", {minimumFractionDigits: d, maximumFractionDigits: d});
+const int = v => v == null ? "–" : Number(v).toLocaleString("en-CA");
 const hm = iso => iso ? new Date(iso).toISOString().slice(11, 16) : "–";
 const SIGNAL = {oven_z1_c: ["Oven zone 1", "°C"], oven_z2_c: ["Oven zone 2", "°C"], oven_z3_c: ["Oven zone 3", "°C"], fill_weight_g: ["Fill weight", "g"]};
-const ICON = {OK: "●", WARN: "▲", ALERT: "■"};
+const SHIFT_HOURS = {A: "06–14", B: "14–22", C: "22–06"};
+const STATUS_TEXT = {OK: "Running", WARN: "High scrap", ALERT: "Drifting"};
 
 // Static snapshot mode (GitHub Pages): scripts/build_static_demo.py sets window.LINEPULSE_STATIC
 // and writes the same JSON the API returns under data/. Each API path maps to one file.
@@ -154,7 +230,8 @@ function staticPath(path) {
   const [p, q] = path.split("?");
   const sig = p.match(/^\/api\/signals\/([^/]+)\/([^/]+)$/);
   if (sig) return {url: `data/signals/${sig[1]}/${sig[2]}.json`, last: Number(new URLSearchParams(q).get("minutes") || 180)};
-  const files = {"/health": "health", "/api/lines": "lines", "/api/alerts": "alerts", "/api/shifts": "shifts", "/api/data-quality": "data-quality"};
+  const files = {"/health": "health", "/api/lines": "lines", "/api/alerts": "alerts", "/api/shifts": "shifts",
+                 "/api/data-quality": "data-quality", "/api/handover": "handover"};
   return {url: `data/${files[p]}.json`};
 }
 
@@ -166,74 +243,149 @@ async function get(path) {
   return target.last ? data.slice(-target.last) : data;
 }
 
-function renderLines(lines) {
-  $("#lines").innerHTML = lines.map(l => `
-    <article class="panel">
-      <div class="line-head">
-        <div><strong>${esc(l.line_id)}</strong> <span class="sku">${esc(l.product)}</span></div>
-        <span class="pill ${esc(l.status)}">${ICON[l.status] || ""} ${esc(l.status)}</span>
-      </div>
-      <div class="stats">
-        <div class="stat"><div class="k">Zone 1</div><div class="v">${fmt(l.oven_z1_c)}<small> °C</small></div></div>
-        <div class="stat"><div class="k">Zone 2</div><div class="v">${fmt(l.oven_z2_c)}<small> °C</small></div></div>
-        <div class="stat"><div class="k">Zone 3</div><div class="v">${fmt(l.oven_z3_c)}<small> °C</small></div></div>
-        <div class="stat"><div class="k">Fill weight</div><div class="v">${fmt(l.fill_weight_g, 2)}<small> g</small></div></div>
-        <div class="stat"><div class="k">Scrap, 15 min</div><div class="v">${fmt(l.scrap_rate_15m_pct, 2)}<small> %</small></div></div>
-        <div class="stat"><div class="k">Open alerts</div><div class="v">${esc(l.open_alerts)}</div></div>
-      </div>
-      <p class="note">Current lot ${esc(l.current_lot)} · data as of ${hm(l.as_of)} UTC</p>
-    </article>`).join("");
-  $("#sel-line").innerHTML = lines.map(l => `<option>${esc(l.line_id)}</option>`).join("");
-  if (lines[0]) $("#asof").textContent = `Data as of ${new Date(lines[0].as_of).toISOString().replace("T", " ").slice(0, 16)} UTC`;
+// ---------- hero
+function renderHero(lines, alerts) {
+  const h = $("#headline"), attn = lines.filter(l => l.status !== "OK");
+  if (!attn.length) {
+    h.textContent = lines.length === 2 ? "Both lines are running normally." : `All ${lines.length} lines are running normally.`;
+    h.className = "";
+  } else {
+    const l = attn[0], a = alerts.find(a => a.line_id === l.line_id && a.status === "open");
+    h.textContent = a ? `${l.line_id} needs attention: ${SIGNAL[a.signal][0].toLowerCase()} is running ${a.direction}.`
+                      : `${l.line_id} needs attention: scrap is above 2% in the last 15 minutes.`;
+    h.className = "attn";
+  }
+  const open = alerts.filter(a => a.status === "open").length;
+  $("#subline").textContent = `${alerts.length} drift alert${alerts.length === 1 ? "" : "s"} in this period, ` +
+    (open ? `${open} still open.` : "all resolved.") + " Data up to " + (lines[0] ? hm(lines[0].as_of) + " UTC." : "–");
+  if (lines[0]) $("#asof").textContent = "Data as of " + new Date(lines[0].as_of).toISOString().replace("T", " ").slice(0, 16) + " UTC";
 }
 
+// ---------- handover
+let notes = [];
+function noteHtml(note, unverified) {
+  const bad = new Set(unverified || []);
+  const token = /L\d+-\d{8}-\d{3}|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}:\d{2}\b|(?<![\w.])[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/g;
+  const label = /(zone|zones|Shift|shift|and|,)\s*$/;
+  const mark = text => esc(text).replace(token, (m, off, s) => {
+    if (/^\d$/.test(m) && label.test(s.slice(Math.max(0, off - 7), off))) return m; // "zone 3", "Shift A" labels
+    return `<span class="fig${bad.has(m) || bad.has(m.replace(/^\+/, "")) ? " bad" : ""}">${m}</span>`;
+  });
+  const inline = t => mark(t).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  let html = "", list = false;
+  for (const raw of note.split("\n")) {
+    const line = raw.trim();
+    if (/^[-*] /.test(line)) { if (!list) { html += "<ul>"; list = true; } html += `<li>${inline(line.slice(2))}</li>`; continue; }
+    if (list) { html += "</ul>"; list = false; }
+    if (line) html += `<p>${inline(line)}</p>`;
+  }
+  return html + (list ? "</ul>" : "");
+}
+
+function showNote(i) {
+  const n = notes[i];
+  document.querySelectorAll("#shift-tabs button").forEach((b, k) => b.setAttribute("aria-selected", String(k === i)));
+  $("#note").innerHTML = noteHtml(n.note, n.unverified);
+  const ok = n.figures_verified === n.figures_total;
+  $("#checked").className = "checked" + (ok ? "" : " bad");
+  $("#checked").textContent = ok ? `All ${n.figures_total} figures checked against the data`
+                                 : `${n.figures_total - n.figures_verified} of ${n.figures_total} figures not found in the data`;
+  const who = n.writer === "llm" ? `Written by ${esc(n.model)} through ${n.tool_calls.length} tool calls over the gold tables`
+                                 : "Written by the fallback template (no LLM key configured), from the same tool calls";
+  $("#how-body").innerHTML = `<p>${who}${n.retried ? ", rewritten once after the checker found unsupported figures" : ""}.
+    Every number, time and lot ID in the note is matched against what the tools returned: figures with a dotted underline were found,
+    figures highlighted in red were not.</p><ol>${n.tool_calls.map(c =>
+      `<li><code>${esc(c.tool)}(${esc(Object.entries(c.args || {}).map(([k, v]) => `${k}=${v}`).join(", "))})</code></li>`).join("")}</ol>`;
+}
+
+function renderHandover(list) {
+  const order = {A: 0, B: 1, C: 2};
+  notes = [...list].sort((a, b) => a.shift_date.localeCompare(b.shift_date) || order[a.shift] - order[b.shift]);
+  $("#handover-section").hidden = !notes.length;
+  if (!notes.length) return;
+  $("#shift-tabs").innerHTML = notes.map((n, i) =>
+    `<button role="tab" data-i="${i}">Shift ${esc(n.shift)} <span class="hrs" style="color:var(--ink-3)">${SHIFT_HOURS[n.shift] || ""}</span></button>`).join("");
+  document.querySelectorAll("#shift-tabs button").forEach(b => b.onclick = () => showNote(Number(b.dataset.i)));
+  const withAlerts = notes.findIndex(n => !/No drift alerts|Nothing drifted/i.test(n.note));
+  showNote(withAlerts >= 0 ? withAlerts : 0);
+}
+
+// ---------- lines
+function renderLines(lines) {
+  $("#lines").innerHTML = lines.map(l => `
+    <div class="row">
+      <span class="id">${esc(l.line_id)}</span>
+      <span class="product">${esc(l.product)}<br><span style="font-size:14px;color:var(--ink-3)">Lot ${esc((l.current_lot || "").split("-").pop())} in progress</span></span>
+      <span class="kv k1"><b>${fmt(l.scrap_rate_15m_pct, 2)}%</b><span>scrap, last 15 min</span></span>
+      <span class="kv k2"><b>${fmt(l.fill_weight_g, 1)} g</b><span>average pack</span></span>
+      <span class="status ${esc(l.status)}">${STATUS_TEXT[l.status] || esc(l.status)}</span>
+    </div>`).join("");
+  $("#sel-line").innerHTML = lines.map(l => `<option>${esc(l.line_id)}</option>`).join("");
+}
+
+// ---------- alerts
 function renderAlerts(alerts) {
-  $("#alerts").innerHTML = `<tr><th>Line</th><th>Signal</th><th>Start</th><th>Detected</th>
-      <th class="num">Min</th><th class="num">Peak dev</th><th class="num">Packs</th><th>Affected lots</th></tr>` +
-    (alerts.length ? alerts.map(a => `<tr class="pick" data-line="${esc(a.line_id)}" data-signal="${esc(a.signal)}">
-      <td>${esc(a.line_id)}</td><td>${esc(SIGNAL[a.signal]?.[0] || a.signal)} <span class="sku">${esc(a.direction)}, ${esc(a.status)}</span></td>
-      <td>${hm(a.start_minute)}</td><td>${hm(a.detected_at)}</td>
-      <td class="num">${esc(a.duration_min)}</td><td class="num">${fmt(a.peak_abs_dev, 1)} ${SIGNAL[a.signal]?.[1] || ""}</td>
-      <td class="num">${Number(a.units_in_window).toLocaleString()}</td>
-      <td class="lots">${a.affected_lots.map(esc).join("<br>")}</td></tr>`).join("")
-     : `<tr><td colspan="8">No alerts.</td></tr>`);
-  document.querySelectorAll("#alerts tr.pick").forEach(tr => tr.onclick = () => {
-    $("#sel-line").value = tr.dataset.line; $("#sel-signal").value = tr.dataset.signal; drawChart();
+  if (!alerts.length) { $("#alerts").innerHTML = `<li class="empty">No drift alerts in this period.</li>`; return; }
+  $("#alerts").innerHTML = alerts.map((a, i) => {
+    const [name, unit] = SIGNAL[a.signal] || [a.signal, ""];
+    const lag = Math.round((Date.parse(a.detected_at) - Date.parse(a.start_minute)) / 60000);
+    const lots = a.affected_lots.map(x => x.split("-").pop()).join(", ");
+    return `<li><button data-i="${i}" aria-pressed="false">
+      <span class="when">${hm(a.start_minute)}–${hm(a.end_minute)}</span>
+      <span class="what">${esc(a.line_id)} ${esc(name.toLowerCase())} ran ${esc(a.direction)}, up to ${fmt(a.peak_abs_dev, 1)} ${unit} off setpoint${a.status === "open" ? " (still open)" : ""}</span>
+      <span class="detail">Flagged ${lag} min after it started · lots ${esc(lots)} made during it · ${int(a.units_in_window)} packs, ${int(a.rejects_in_window)} rejected</span>
+    </button></li>`;
+  }).join("");
+  document.querySelectorAll("#alerts button").forEach(b => b.onclick = () => {
+    const a = alerts[Number(b.dataset.i)];
+    document.querySelectorAll("#alerts button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    $("#sel-line").value = a.line_id; $("#sel-signal").value = a.signal;
+    drawChart().catch(showError);
   });
 }
 
+// ---------- shifts
 function renderShifts(rows) {
-  $("#shifts").innerHTML = `<tr><th>Line</th><th>Date</th><th>Shift</th><th class="num">Packs</th><th class="num">Scrap %</th>
-      <th class="num">Underweight</th><th class="num">Bake defect</th><th class="num">Avg weight g</th>
-      <th class="num">Giveaway g/pack</th><th class="num">Giveaway kg</th><th class="num">Giveaway CAD</th><th class="num">Alerts</th></tr>` +
-    rows.map(k => `<tr><td>${esc(k.line_id)}</td><td>${esc(k.shift_date)}</td><td>${esc(k.shift)}</td>
-      <td class="num">${Number(k.units).toLocaleString()}</td><td class="num">${fmt(k.scrap_rate_pct, 2)}</td>
-      <td class="num">${esc(k.rejects_underweight)}</td><td class="num">${esc(k.rejects_bake_defect)}</td>
-      <td class="num">${fmt(k.avg_accepted_weight_g, 2)}</td><td class="num">${fmt(k.giveaway_g_per_pack, 2)}</td>
-      <td class="num">${fmt(k.giveaway_kg, 1)}</td><td class="num">${fmt(k.giveaway_cost_cad, 2)}</td>
-      <td class="num">${esc(k.alerts)}</td></tr>`).join("");
+  const order = {A: 0, B: 1, C: 2};
+  rows = [...rows].sort((a, b) => a.shift_date.localeCompare(b.shift_date) || order[a.shift] - order[b.shift] || a.line_id.localeCompare(b.line_id));
+  $("#shifts").innerHTML = `<tr><th>Shift</th><th>Line</th><th class="num">Packs</th><th class="num">Scrap</th>
+      <th class="num">Giveaway</th><th class="num">Alerts</th>
+      <th class="num more">Underweight</th><th class="num more">Bake defect</th><th class="num more">Avg pack</th><th class="num more">Over label</th></tr>` +
+    rows.map(k => `<tr><td>${esc(k.shift)} <span style="color:var(--ink-3)">${SHIFT_HOURS[k.shift] || ""}, ${esc(k.shift_date)}</span></td>
+      <td>${esc(k.line_id)}</td><td class="num">${int(k.units)}</td><td class="num">${fmt(k.scrap_rate_pct, 2)}%</td>
+      <td class="num">CAD ${fmt(k.giveaway_cost_cad, 2)}</td><td class="num">${int(k.alerts)}</td>
+      <td class="num more">${int(k.rejects_underweight)}</td><td class="num more">${int(k.rejects_bake_defect)}</td>
+      <td class="num more">${fmt(k.avg_accepted_weight_g, 2)} g</td><td class="num more">${fmt(k.giveaway_g_per_pack, 2)} g</td></tr>`).join("");
 }
+$("#toggle-more").onclick = e => {
+  const on = $("#shift-box").classList.toggle("show-more");
+  e.target.setAttribute("aria-expanded", String(on));
+  e.target.textContent = on ? "Hide reject and weight detail" : "Show reject and weight detail";
+};
 
 function renderDq(rows) {
-  $("#dq").innerHTML = `<tr><th>Rule</th><th>Event</th><th class="num">Records</th></tr>` +
-    rows.map(r => `<tr><td>${esc(r.rule)}</td><td>${esc(r.event_type)}</td><td class="num">${esc(r.records)}</td></tr>`).join("");
+  const total = rows.reduce((s, r) => s + r.records, 0);
+  $("#dq").textContent = `${int(total)} malformed sensor and checkweigher records were set aside by data-quality checks ` +
+    `(${rows.map(r => `${int(r.records)} ${r.rule.replaceAll("_", " ")}`).join(", ")}). None reached these numbers. ` +
+    "Giveaway is accepted weight above the 90 g label, priced at an illustrative CAD 2.50/kg.";
 }
 
+// ---------- chart
 async function drawChart() {
   const line = $("#sel-line").value, signal = $("#sel-signal").value, win = $("#sel-window").value;
   const [name, unit] = SIGNAL[signal];
-  $("#chart-title").textContent = `${line} · ${name}`;
+  $("#chart-title").textContent = `${line} ${name.toLowerCase()}`;
   const rows = await get(`/api/signals/${line}/${signal}?minutes=${win}`);
   const host = $("#chart"), tip = $("#tip");
   host.querySelector("svg")?.remove();
   if (!rows.length) { $("#chart-sub").textContent = "No data yet."; return; }
   const sp = rows[0].setpoint, thr = rows[0].threshold;
   const overN = rows.filter(r => r.over).length;
-  $("#chart-sub").textContent = `Setpoint ${fmt(sp, 1)} ${unit}, alert when EWMA deviation ≥ ${fmt(thr, 1)} ${unit} for 3 min · ${overN} minutes over threshold`;
+  $("#chart-sub").textContent = `Setpoint ${fmt(sp, 1)} ${unit}. An alert fires after 3 minutes more than ${fmt(thr, 1)} ${unit} off (smoothed). ` +
+    (overN ? `${overN} minutes drifting in this window.` : "No drift in this window.");
 
-  const W = host.clientWidth || 800, H = 260, m = {l: 52, r: 16, t: 12, b: 28};
+  const W = host.clientWidth || 800, H = 240, m = {l: 44, r: 8, t: 10, b: 26};
   const t = rows.map(r => Date.parse(r.minute)), v = rows.map(r => r.mean_value);
-  // "Nice" ticks: round steps on the value axis, whole hours (or half hours) on time.
   const rawLo = Math.min(...v, sp - thr), rawHi = Math.max(...v, sp + thr);
   const span = rawHi - rawLo || 1, mag = 10 ** Math.floor(Math.log10(span / 4));
   const step = [1, 2, 2.5, 5, 10].map(f => f * mag).find(st => span / st <= 5);
@@ -241,17 +393,17 @@ async function drawChart() {
   const X = x => m.l + (x - t[0]) / Math.max(1, t.at(-1) - t[0]) * (W - m.l - m.r);
   const Y = y => m.t + (1 - (y - lo) / (hi - lo)) * (H - m.t - m.b);
   const yt = []; for (let y = lo; y <= hi + step / 2; y += step) yt.push(y);
-  const hours = (t.at(-1) - t[0]) / 36e5, every = (hours > 4 ? 2 : hours > 2 ? 1 : 0.5) * 36e5 * (W < 500 ? 2 : 1);
+  const hours = (t.at(-1) - t[0]) / 36e5, every = (hours > 12 ? 4 : hours > 4 ? 2 : hours > 2 ? 1 : 0.5) * 36e5 * (W < 500 ? 2 : 1);
   const xt = []; for (let x = Math.ceil(t[0] / every) * every; x <= t.at(-1); x += every) xt.push(x);
   const path = rows.map((r, i) => `${i ? "L" : "M"}${X(t[i]).toFixed(1)},${Y(r.mean_value).toFixed(1)}`).join("");
-  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(line)} ${esc(name)} per-minute mean over time">
+  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(line)} ${esc(name)} per-minute average over time">
     ${yt.map(y => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(y)}" y2="${Y(y)}" stroke="var(--grid)"/>
-      <text x="${m.l - 8}" y="${Y(y) + 4}" text-anchor="end" font-size="11" fill="var(--ink-3)">${fmt(y, step < 1 ? 1 : 0)}</text>`).join("")}
-    ${xt.map(x => `<text x="${X(x)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--ink-3)">${hm(new Date(x).toISOString())}</text>`).join("")}
+      <text x="${m.l - 8}" y="${Y(y) + 4}" text-anchor="end" font-size="12" fill="var(--ink-3)">${fmt(y, step < 1 ? 1 : 0)}</text>`).join("")}
+    ${xt.map(x => `<text x="${X(x)}" y="${H - 6}" text-anchor="middle" font-size="12" fill="var(--ink-3)">${hm(new Date(x).toISOString())}</text>`).join("")}
     <rect x="${m.l}" width="${W - m.l - m.r}" y="${Y(sp + thr)}" height="${Y(sp - thr) - Y(sp + thr)}" fill="var(--band)"/>
     <line x1="${m.l}" x2="${W - m.r}" y1="${Y(sp)}" y2="${Y(sp)}" stroke="var(--ink-3)" stroke-dasharray="4 4"/>
     <path d="${path}" fill="none" stroke="var(--series)" stroke-width="2" stroke-linejoin="round"/>
-    ${rows.map((r, i) => r.over ? `<circle cx="${X(t[i])}" cy="${Y(r.mean_value)}" r="3" fill="var(--critical)" stroke="var(--surface)" stroke-width="1"/>` : "").join("")}
+    ${rows.map((r, i) => r.over ? `<circle cx="${X(t[i])}" cy="${Y(r.mean_value)}" r="3" fill="var(--bad)" stroke="var(--surface)" stroke-width="1"/>` : "").join("")}
     <line id="xh" y1="${m.t}" y2="${H - m.b}" stroke="var(--ink-3)" visibility="hidden"/>
     <rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent" id="hit"/>
   </svg>`;
@@ -264,36 +416,38 @@ async function drawChart() {
     const r = rows[i];
     xh.setAttribute("x1", X(t[i])); xh.setAttribute("x2", X(t[i])); xh.setAttribute("visibility", "visible");
     tip.style.display = "block";
-    tip.innerHTML = `<b>${hm(r.minute)} UTC</b><br>Mean ${fmt(r.mean_value, 2)} ${unit}<br>EWMA dev ${fmt(r.ewma_dev, 2)} ${unit}${r.over ? " · over" : ""}`;
+    tip.innerHTML = `<b>${hm(r.minute)} UTC</b><br>${fmt(r.mean_value, 2)} ${unit}${r.over ? ", drifting" : ""}`;
     const left = Math.min((X(t[i]) / W) * box.width + 12, box.width - tip.offsetWidth - 4);
     tip.style.left = left + "px"; tip.style.top = "8px";
   };
   s.querySelector("#hit").onmouseleave = () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); };
 }
 
+function showError(e) { $("#error").hidden = false; $("#error").textContent = e.message; }
+
 async function load() {
   try {
-    const [health, lines, alerts, shifts, dq] = await Promise.all(
-      ["/health", "/api/lines", "/api/alerts?limit=50", "/api/shifts", "/api/data-quality"].map(get));
+    const [health, lines, alerts, shifts, dq, handover] = await Promise.all(
+      ["/health", "/api/lines", "/api/alerts?limit=50", "/api/shifts", "/api/data-quality", "/api/handover"].map(get));
     $("#error").hidden = true;
-    $("#mode").textContent = {databricks: "Databricks SQL", snapshot: "Static snapshot"}[health.mode] || "Local export";
+    $("#mode").textContent = {databricks: "Live from Databricks SQL", snapshot: "Snapshot"}[health.mode] || "Local data";
     const keepLine = $("#sel-line").value;
-    renderLines(lines); renderAlerts(alerts); renderShifts(shifts); renderDq(dq);
+    renderHero(lines, alerts); renderLines(lines); renderAlerts(alerts); renderShifts(shifts); renderDq(dq);
+    if (!notes.length) renderHandover(handover);
     if (keepLine) $("#sel-line").value = keepLine;
     else if (alerts[0]) { $("#sel-line").value = alerts[0].line_id; $("#sel-signal").value = alerts[0].signal; }
     await drawChart();
-  } catch (e) {
-    $("#error").hidden = false; $("#error").textContent = e.message;
-  }
+  } catch (e) { showError(e); }
 }
-["#sel-line", "#sel-signal", "#sel-window"].forEach(s => $(s).onchange = () => drawChart().catch(e => { $("#error").hidden = false; $("#error").textContent = e.message; }));
+["#sel-line", "#sel-signal", "#sel-window"].forEach(s => $(s).onchange = () => drawChart().catch(showError));
 window.addEventListener("resize", () => drawChart().catch(() => {}));
+
 if (STATIC) {
   const sc = STATIC.scorecard;
   $("#snapshot").hidden = false;
-  $("#snapshot").innerHTML = `Static snapshot of a <b>${STATIC.hours}-hour simulated run</b>${STATIC.matches_live ? ", identical to the live Databricks run" : ""}: ` +
-    `<b>${sc.detected}/${sc.faults}</b> injected faults caught, mean <b>${sc.mean_latency_min} min</b>, <b>${sc.false_alarms}</b> false alarms. ` +
-    `Same page the .NET API serves. <a href="${STATIC.repo}">Source on GitHub</a>`;
+  $("#snapshot").innerHTML = `This is a snapshot of a ${STATIC.hours}-hour simulated run${STATIC.matches_live ? ", identical to the run on Databricks" : ""}. ` +
+    `${sc.detected} of ${sc.faults} injected faults were caught, on average ${sc.mean_latency_min} minutes after they started, with ${sc.false_alarms} false alarms. ` +
+    `<a href="${STATIC.repo}">How it works</a>`;
   $("#sel-window").value = "1440";
   load();
 } else {

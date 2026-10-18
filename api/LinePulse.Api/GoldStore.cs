@@ -22,6 +22,22 @@ public static class Json
     public static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
 }
 
+/// <summary>
+/// Handover notes are written outside Databricks (Free Edition cannot call LLM APIs) by
+/// scripts/generate_handover.py into a JSON file; both API modes serve that file.
+/// A missing file means "not generated yet": an empty list, not an error.
+/// </summary>
+public sealed class HandoverFile(string path)
+{
+    public async Task<IReadOnlyList<HandoverNote>> ReadAsync(CancellationToken ct)
+    {
+        if (!File.Exists(path)) return [];
+        await using var fs = File.OpenRead(path);
+        var notes = await JsonSerializer.DeserializeAsync<List<HandoverNote>>(fs, Json.Options, ct) ?? [];
+        return notes.OrderByDescending(n => n.ShiftDate).ThenByDescending(n => n.Shift).ToList();
+    }
+}
+
 /// <summary>Local mode: reads the JSON files that scripts/run_local.py exports. No cloud needed.</summary>
 public sealed class LocalJsonGoldStore(string exportDir) : IGoldStore
 {

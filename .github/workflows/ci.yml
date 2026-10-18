@@ -26,6 +26,9 @@ jobs:
       - name: Simulate one shift and build gold tables
         run: python scripts/run_local.py --minutes 480 --chunks 4 --engine delta
 
+      - name: Write shift-handover notes (template, no API key in CI)
+        run: python scripts/generate_handover.py --no-llm
+
       - name: Build API
         run: dotnet build api/LinePulse.Api -c Release
 

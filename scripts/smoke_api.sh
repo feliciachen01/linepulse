@@ -28,5 +28,6 @@ check 200 "/api/shifts?lineId=L2" '"giveaway_cost_cad"'
 check 200 "/api/signals/L1/oven_z3_c?minutes=30" '"ewma_dev"'
 check 400 "/api/signals/L1/not_a_signal"
 check 200 /api/data-quality '"rule"'
+check 200 /api/handover '"figures_verified"'
 check 200 / 'LinePulse'
 exit $fail

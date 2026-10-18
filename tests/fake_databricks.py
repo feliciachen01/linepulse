@@ -12,6 +12,7 @@ and splits results into two chunks so the client's chunk-following is exercised.
 import argparse
 import json
 import re
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -84,11 +85,12 @@ class Handler(BaseHTTPRequestHandler):
         data = [[cell(r[c], types[c]) for c in cols] for r in rows]
         half = max(1, len(data) // 2)
         link = None
+        statement_id = uuid.uuid4().hex  # unique per statement, as on Databricks (concurrent requests)
         if len(data) > 1:
-            link = f"/api/2.0/sql/statements/s1/result/chunks/1"
+            link = f"/api/2.0/sql/statements/{statement_id}/result/chunks/1"
             CHUNKS[link] = {"chunk_index": 1, "data_array": data[half:]}
         self._send(200, {
-            "statement_id": "s1",
+            "statement_id": statement_id,
             "status": {"state": "SUCCEEDED"},
             "manifest": {"format": "JSON_ARRAY",
                          "schema": {"columns": [{"name": c, "type_name": types[c]} for c in cols]}},
