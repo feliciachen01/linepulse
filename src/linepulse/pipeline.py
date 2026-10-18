@@ -19,16 +19,24 @@ from pyspark.sql import DataFrame, functions as F, Window
 from pyspark.sql.types import (BooleanType, DoubleType, StringType, StructField,
                                StructType, TimestampType, LongType)
 
-from . import config as C
+from types import SimpleNamespace
+
+from . import config as _config
 from .store import TableStore
 
-# Ship this module's functions to Spark's Python workers by value, so UDFs work
-# even where the workers cannot import the linepulse package (serverless, local).
+# Config as plain values, not a module object. Functions shipped to Spark workers
+# (foreachBatch, applyInPandas) must not reference a module: on Databricks serverless
+# a module imported from a Git folder carries a workspace loader that cannot be pickled.
+C = SimpleNamespace(**{k: v for k, v in vars(_config).items() if k.isupper()})
+
+# Ship this module's and store's functions by value, so workers never need to import
+# the linepulse package (serverless, Spark Connect, local). Config is not registered:
+# it travels as the plain namespace above.
 try:
     import sys as _sys
     from pyspark import cloudpickle as _cp
     from . import store as _store_mod
-    for _m in (_sys.modules[__name__], C, _store_mod):
+    for _m in (_sys.modules[__name__], _store_mod):
         _cp.register_pickle_by_value(_m)
 except Exception:  # pragma: no cover - older pyspark without the hook
     pass
@@ -192,6 +200,11 @@ def ewma_frame(pdf: pd.DataFrame, alpha: float, thresholds: dict) -> pd.DataFram
     return pdf
 
 
+def ewma_udf(alpha: float, thresholds: dict):
+    """The function applyInPandas ships to workers: plain values only, no module references."""
+    return lambda pdf: ewma_frame(pdf, alpha, thresholds)
+
+
 def build_signal_minute(store: TableStore) -> DataFrame:
     tel = store.read("silver_telemetry")
     units = store.read("silver_units")
@@ -209,7 +222,7 @@ def build_signal_minute(store: TableStore) -> DataFrame:
                .select("line_id", "signal", "minute", "mean_value", "setpoint", "deviation", "n"))
     alpha, thresholds = C.DETECTOR["alpha"], C.DETECTOR["thresholds"]
     return minutes.groupBy("line_id", "signal").applyInPandas(
-        lambda pdf: ewma_frame(pdf, alpha, thresholds), schema=SIGNAL_MINUTE_SCHEMA)
+        ewma_udf(alpha, thresholds), schema=SIGNAL_MINUTE_SCHEMA)
 
 
 def build_alerts(signal_minute: DataFrame, units: DataFrame) -> DataFrame:
