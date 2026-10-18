@@ -87,6 +87,22 @@ covered by regression tests: functions shipped to workers must not reference a m
 imported from a Git folder (its workspace loader cannot be pickled), and the sweep must
 handle a run where no fault has started yet.
 
+### Live dashboard (.NET 8 API on the Databricks SQL warehouse)
+
+![LinePulse dashboard serving live gold tables from Databricks SQL](docs/dashboard-live.png)
+
+The API runs in a GitHub Codespace and reads the gold tables through the Databricks SQL
+Statement Execution API with a personal access token. The dashboard shows both lines, the
+three drift alerts with the lots made during each excursion, and KPIs for all three shifts.
+
+| Request (`GET /api/alerts`) | Time |
+| --- | --- |
+| First call: live query to the SQL warehouse | 1.40 s |
+| Next calls: served from the API's 60 s cache | 2-5 ms |
+
+The cache is there because gold only changes when the pipeline runs; every cache hit is a
+query the Free Edition warehouse does not have to run.
+
 ## How it works
 
 ```
@@ -189,7 +205,7 @@ Inputs are validated against allow-lists and all SQL is parameterized.
 - API: 12 smoke checks in Local mode, and in Databricks mode against a fake Statement
   Execution API (`tests/fake_databricks.py`) that returns the real response shape.
 - Live on Databricks Free Edition serverless: results identical to the local run (above).
-  The API has not yet been pointed at the live SQL warehouse.
+  The .NET API has served the live gold tables from the Databricks SQL warehouse (above).
 
 ## Next steps
 
