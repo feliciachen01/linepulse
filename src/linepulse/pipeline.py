@@ -5,7 +5,8 @@ silver  : typed, deduplicated (MERGE on event_id), split by event type.
           Records failing data-quality rules go to silver_quarantine with the
           names of the rules they failed. Nothing is silently dropped.
 gold    : business tables the API serves - per-minute signals with EWMA,
-          drift alerts with affected lots, shift KPIs, line status, DQ summary.
+          drift alerts with affected lots, per-minute product quality, shift KPIs,
+          line status, DQ summary.
 
 Bronze and silver are incremental (Structured Streaming, Trigger.AvailableNow)
 because that is the only trigger serverless compute supports. Gold is small
@@ -181,7 +182,7 @@ SIGNAL_MINUTE_SCHEMA = StructType([
     StructField("line_id", StringType()), StructField("signal", StringType()),
     StructField("minute", TimestampType()), StructField("mean_value", DoubleType()),
     StructField("setpoint", DoubleType()), StructField("deviation", DoubleType()),
-    StructField("n", LongType()), StructField("ewma_dev", DoubleType()),
+    StructField("n", LongType()), StructField("sd_value", DoubleType()), StructField("ewma_dev", DoubleType()),
     StructField("threshold", DoubleType()), StructField("over", BooleanType()),
 ])
 
@@ -209,17 +210,19 @@ def build_signal_minute(store: TableStore) -> DataFrame:
     tel = store.read("silver_telemetry")
     units = store.read("silver_units")
     setpoints = F.create_map(*[x for k, v in C.SETPOINTS.items() for x in (F.lit(k), F.lit(v))])
-    ovens = (tel.filter(F.col("sensor").isin(*C.OVEN_SENSORS))
-             .groupBy("line_id", F.col("sensor").alias("signal"), F.date_trunc("minute", "ts").alias("minute"))
-             .agg(F.avg("value").alias("mean_value"), F.count("*").alias("n"))
-             .withColumn("setpoint", setpoints[F.col("signal")]))
+    # Every telemetry signal is kept, alerting or not: belt speed and proofer humidity are the
+    # context an investigation needs. sd_value (spread within the minute) shows a noisy sensor.
+    sensors = (tel.filter(F.col("sensor").isin(*C.TELEMETRY_SIGNALS))
+               .groupBy("line_id", F.col("sensor").alias("signal"), F.date_trunc("minute", "ts").alias("minute"))
+               .agg(F.avg("value").alias("mean_value"), F.count("*").alias("n"), F.stddev("value").alias("sd_value"))
+               .withColumn("setpoint", setpoints[F.col("signal")]))
     fill = (units.groupBy("line_id", F.date_trunc("minute", "ts").alias("minute"))
-            .agg(F.avg("weight_g").alias("mean_value"), F.count("*").alias("n"))
+            .agg(F.avg("weight_g").alias("mean_value"), F.count("*").alias("n"), F.stddev("weight_g").alias("sd_value"))
             .withColumn("signal", F.lit("fill_weight_g"))
             .withColumn("setpoint", F.lit(C.TARGET_WEIGHT_G)))
-    minutes = (ovens.unionByName(fill)
+    minutes = (sensors.unionByName(fill)
                .withColumn("deviation", F.col("mean_value") - F.col("setpoint"))
-               .select("line_id", "signal", "minute", "mean_value", "setpoint", "deviation", "n"))
+               .select("line_id", "signal", "minute", "mean_value", "setpoint", "deviation", "n", "sd_value"))
     alpha, thresholds = C.DETECTOR["alpha"], C.DETECTOR["thresholds"]
     return minutes.groupBy("line_id", "signal").applyInPandas(
         ewma_udf(alpha, thresholds), schema=SIGNAL_MINUTE_SCHEMA)
@@ -264,6 +267,20 @@ def build_alerts(signal_minute: DataFrame, units: DataFrame) -> DataFrame:
             .orderBy("start_minute"))
 
 
+def build_quality_minute(units: DataFrame) -> DataFrame:
+    """What came off the line each minute: packs, rejects by reason, weight. The evidence that
+    separates a real process problem (product changes) from a sensor problem (it doesn't)."""
+    accepted = ~F.col("rejected")
+    return (units.groupBy("line_id", F.date_trunc("minute", "ts").alias("minute"))
+            .agg(F.count("*").alias("units"),
+                 F.sum((F.col("reject_reason") == "bake_defect").cast("int")).alias("rejects_bake_defect"),
+                 F.sum((F.col("reject_reason") == "underweight").cast("int")).alias("rejects_underweight"),
+                 F.round(F.avg("weight_g"), 3).alias("mean_weight_g"),
+                 F.round(F.avg(F.when(accepted, F.col("weight_g") - C.LABEL_WEIGHT_G)), 3).alias("giveaway_g_per_pack"))
+            .fillna({"rejects_bake_defect": 0, "rejects_underweight": 0})
+            .orderBy("line_id", "minute"))
+
+
 def _shift_cols(ts_col):
     hour = F.hour(ts_col)
     shift = F.when((hour >= 6) & (hour < 14), "A").when((hour >= 14) & (hour < 22), "B").otherwise("C")
@@ -304,7 +321,7 @@ def build_shift_kpis(units: DataFrame, alerts: DataFrame) -> DataFrame:
 def build_line_status(signal_minute: DataFrame, units: DataFrame, alerts: DataFrame, spark) -> DataFrame:
     as_of = signal_minute.groupBy("line_id").agg(F.max("minute").alias("as_of"))
     latest = (signal_minute.join(as_of, "line_id").filter(F.col("minute") == F.col("as_of"))
-              .groupBy("line_id", "as_of").pivot("signal", C.OVEN_SENSORS + ["fill_weight_g"])
+              .groupBy("line_id", "as_of").pivot("signal", C.OVEN_SENSORS + ["fill_weight_g", "belt_speed_mpm"])
               .agg(F.round(F.first("mean_value"), 2)))
     recent = (units.join(as_of, "line_id")
               .filter(F.col("ts") >= F.col("as_of") - F.expr("INTERVAL 15 MINUTES"))
@@ -335,12 +352,13 @@ def run_gold(store: TableStore) -> dict:
     alerts = build_alerts(sm, units)
     store.overwrite(alerts, "gold_alerts")
     alerts = store.read("gold_alerts")
+    store.overwrite(build_quality_minute(units), "gold_quality_minute")
     store.overwrite(build_shift_kpis(units, alerts), "gold_shift_kpis")
     store.overwrite(build_line_status(sm, units, alerts, spark), "gold_line_status")
     store.overwrite(build_dq_summary(store.read("silver_quarantine")), "gold_dq_summary")
     return {t: store.read(t).count() for t in
             ["bronze_events", "silver_telemetry", "silver_units", "silver_quarantine",
-             "gold_signal_minute", "gold_alerts", "gold_shift_kpis", "gold_line_status", "gold_dq_summary"]}
+             "gold_signal_minute", "gold_alerts", "gold_quality_minute", "gold_shift_kpis", "gold_line_status", "gold_dq_summary"]}
 
 
 def run_all(store: TableStore, landing_path: str, use_autoloader: bool) -> dict:

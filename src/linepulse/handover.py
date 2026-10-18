@@ -24,7 +24,8 @@ from pathlib import Path
 
 SHIFT_HOURS = {"A": (6, 14), "B": (14, 22), "C": (22, 6)}
 SIGNAL_NAMES = {"oven_z1_c": ("oven zone 1", "°C"), "oven_z2_c": ("oven zone 2", "°C"),
-                "oven_z3_c": ("oven zone 3", "°C"), "fill_weight_g": ("fill weight", "g")}
+                "oven_z3_c": ("oven zone 3", "°C"), "fill_weight_g": ("fill weight", "g"),
+                "belt_speed_mpm": ("belt speed", "m/min"), "proofer_rh_pct": ("proofer humidity", "%")}
 
 DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
 DEFAULT_MODEL = "gemini-2.5-flash"

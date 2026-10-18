@@ -24,7 +24,8 @@ sys.path.insert(0, str(ROOT / "src"))
 from linepulse import evaluate, pipeline, simulator  # noqa: E402
 from linepulse.store import TableStore  # noqa: E402
 
-GOLD_EXPORTS = ["gold_line_status", "gold_alerts", "gold_shift_kpis", "gold_dq_summary", "gold_signal_minute"]
+GOLD_EXPORTS = ["gold_line_status", "gold_alerts", "gold_shift_kpis", "gold_dq_summary", "gold_signal_minute",
+                "gold_quality_minute"]
 
 
 def local_spark(engine: str):

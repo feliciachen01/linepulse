@@ -187,6 +187,8 @@
             <option value="oven_z2_c">Oven zone 2 (°C)</option>
             <option value="oven_z3_c">Oven zone 3 (°C)</option>
             <option value="fill_weight_g">Fill weight (g)</option>
+            <option value="belt_speed_mpm">Belt speed (m/min)</option>
+            <option value="proofer_rh_pct">Proofer humidity (%)</option>
           </select>
           <select id="sel-window" aria-label="Time window">
             <option value="120">Last 2 h</option><option value="240">Last 4 h</option>
@@ -219,7 +221,7 @@ const esc = v => String(v ?? "–").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&
 const fmt = (v, d = 1) => v == null ? "–" : Number(v).toLocaleString("en-CA", {minimumFractionDigits: d, maximumFractionDigits: d});
 const int = v => v == null ? "–" : Number(v).toLocaleString("en-CA");
 const hm = iso => iso ? new Date(iso).toISOString().slice(11, 16) : "–";
-const SIGNAL = {oven_z1_c: ["Oven zone 1", "°C"], oven_z2_c: ["Oven zone 2", "°C"], oven_z3_c: ["Oven zone 3", "°C"], fill_weight_g: ["Fill weight", "g"]};
+const SIGNAL = {oven_z1_c: ["Oven zone 1", "°C"], oven_z2_c: ["Oven zone 2", "°C"], oven_z3_c: ["Oven zone 3", "°C"], fill_weight_g: ["Fill weight", "g"], belt_speed_mpm: ["Belt speed", "m/min"], proofer_rh_pct: ["Proofer humidity", "%"]};
 const SHIFT_HOURS = {A: "06–14", B: "14–22", C: "22–06"};
 const STATUS_TEXT = {OK: "Running", WARN: "High scrap", ALERT: "Drifting"};
 

@@ -14,6 +14,7 @@ public sealed record LineStatus(
     [property: JsonPropertyName("oven_z2_c")] double? OvenZ2C,
     [property: JsonPropertyName("oven_z3_c")] double? OvenZ3C,
     [property: JsonPropertyName("fill_weight_g")] double? FillWeightG,
+    [property: JsonPropertyName("belt_speed_mpm")] double? BeltSpeedMpm,
     [property: JsonPropertyName("scrap_rate_15m_pct")] double? ScrapRate15mPct,
     [property: JsonPropertyName("current_lot")] string? CurrentLot,
     [property: JsonPropertyName("open_alerts")] long OpenAlerts,
