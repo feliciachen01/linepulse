@@ -179,22 +179,31 @@ is investigated and scored against the injected root cause.
 | --- | --- |
 | Alarm lookup table (oven alarm = burner, belt = belt, fill = filler) | 177 / 240 (74%) |
 | Deterministic investigator | 239 / 240 |
-| LLM agent (Gemini 2.5 Flash, free tier) | run it with a key: see below |
+| **LLM agent** (Gemini 3.5 Flash-Lite, free tier), first 30 incidents | **29 / 30**, with 365 / 365 figures verified |
 
-| True cause | Incidents | Lookup table | Deterministic investigator |
-| --- | --- | --- | --- |
-| Burner fault | 76 | 76 | 76 |
-| Thermocouple drift | 60 | **0** | 59 |
-| Belt slowdown | 51 | 48 | 51 |
-| Filler drift | 53 | 53 | 53 |
+| True cause | Incidents | Lookup table | Deterministic investigator | LLM agent (of 30) |
+| --- | --- | --- | --- | --- |
+| Burner fault | 76 | 76 | 76 | 7 / 7 |
+| Thermocouple drift | 60 | **0** | 59 | 8 / 9 |
+| Belt slowdown | 51 | 48 | 51 | 8 / 8 |
+| Filler drift | 53 | 53 | 53 | 6 / 6 |
+
+On the same 30 incidents the lookup table got 21 right.
 
 Read this honestly. The lookup table is what an alarm list gives you without investigating: right
 whenever the alarm's signal is the cause, wrong on every drifting sensor. The deterministic
 investigator was written by the same person who wrote the simulator, so its score mostly shows the
 evidence is sufficient; it is the fallback, not the point. Its one miss is instructive: a 3-minute
-alert covered only 180 packs, and 4 random bake defects looked like a threefold rise. The LLM agent's
-score is the real test, because it only gets general plant knowledge. Free-tier quota is limited, so
-it is evaluated on demand and the result is committed:
+alert covered only 180 packs, and 4 random bake defects looked like a threefold rise.
+
+The LLM agent is the real test, because it only gets general plant knowledge, not the simulator's
+rules. It named 8 of 9 drifting thermocouples, every one of which the lookup table gets wrong, and
+every figure it wrote checked out. Its miss: an alert 49 minutes into the data, so the baseline hour
+held only 29 minutes. Bake defects went from 3.5 to 5.3 per 1,000 packs (a noise-level change) and
+the reading was 2.6 times noisier, and the model called a burner fault. Thirty incidents is a small
+sample (the free tier allows a few hundred requests a day, about 5 per investigation), so read
+29 / 30 as "about as good as the hand-written rules", not as a precise rate. It is evaluated on
+demand and the result committed:
 
 ```bash
 GEMINI_API_KEY=... python scripts/evaluate_investigations.py --days 30 --llm-max 30 --save docs/investigation_eval.json
