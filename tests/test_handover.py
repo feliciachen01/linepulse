@@ -1,12 +1,9 @@
 """Shift-handover agent tests, against a fake OpenAI-compatible server (no API key, no network)."""
 
 import json
-import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-
 import pytest
 
-from linepulse.handover import ChatClient, GoldTools, generate, template_note, verify
+from linepulse.handover import GoldTools, generate, template_note, verify
 
 GOLD = {
     "gold_shift_kpis": [
@@ -39,33 +36,6 @@ def tool_call_turn():
                                                        "arguments": json.dumps({"shift_date": "2026-10-19", "shift": "A"})}},
         {"id": "c2", "type": "function", "function": {"name": "get_shift_alerts",
                                                        "arguments": json.dumps({"shift_date": "2026-10-19", "shift": "A"})}}]}
-
-
-@pytest.fixture
-def fake_llm():
-    """Serves scripted chat-completion replies in order and records each request."""
-    state = {"replies": [], "requests": [], "status": 200}
-
-    class H(BaseHTTPRequestHandler):
-        def do_POST(self):
-            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-            state["requests"].append({"auth": self.headers.get("Authorization"), "body": body})
-            if state["status"] != 200:
-                self.send_response(state["status"]); self.end_headers(); self.wfile.write(b"{}"); return
-            msg = state["replies"].pop(0)
-            out = json.dumps({"choices": [{"message": msg}]}).encode()
-            self.send_response(200); self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(out))); self.end_headers(); self.wfile.write(out)
-
-        def log_message(self, *a):
-            pass
-
-    srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    state["client"] = ChatClient(base_url=f"http://127.0.0.1:{srv.server_port}/v1", api_key="test-key",
-                                 model="fake-model", min_interval_s=0)
-    yield state
-    srv.shutdown()
 
 
 def test_verifier_accepts_rounded_tool_values_and_flags_invented_ones():
