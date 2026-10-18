@@ -34,6 +34,9 @@ else
 var handoverPath = builder.Configuration["LinePulse:HandoverFile"] ?? "../../local_data/export/gold_handover.json";
 builder.Services.AddSingleton(new HandoverFile(
     Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, handoverPath))));
+var investigationsDir = builder.Configuration["LinePulse:InvestigationsDir"] ?? "../../local_data/export";
+builder.Services.AddSingleton(new InvestigationFiles(
+    Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, investigationsDir))));
 
 var app = builder.Build();
 app.UseExceptionHandler(e => e.Run(async ctx =>
@@ -55,6 +58,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 var lineIdPattern = new Regex("^L[0-9]{1,3}$", RegexOptions.Compiled);
+var alertIdPattern = new Regex("^L[0-9]{1,3}-[a-z0-9_]{1,40}-[0-9]{8}T[0-9]{4}$", RegexOptions.Compiled);
 string[] signals = ["oven_z1_c", "oven_z2_c", "oven_z3_c", "fill_weight_g", "belt_speed_mpm", "proofer_rh_pct"];
 string[] alertStatuses = ["open", "closed"];
 
@@ -93,6 +97,30 @@ api.MapGet("/signals/{lineId}/{signal}", async (string lineId, string signal, in
 });
 
 api.MapGet("/handover", async (HandoverFile f, CancellationToken ct) => Results.Ok(await f.ReadAsync(ct)));
+
+api.MapGet("/investigations", async (InvestigationFiles f, CancellationToken ct) => Results.Ok(await f.ListAsync(ct)));
+
+api.MapGet("/investigations/evaluation", async (InvestigationFiles f, CancellationToken ct) =>
+    await f.EvaluationAsync(ct) is { } e ? Results.Ok(e)
+        : Results.NotFound(new { error = "No evaluation yet. Run: python scripts/evaluate_investigations.py" }));
+
+api.MapGet("/investigations/{alertId}", async (string alertId, InvestigationFiles f, CancellationToken ct) =>
+{
+    if (!alertIdPattern.IsMatch(alertId)) return Results.BadRequest(new { error = "alertId must look like L1-oven_z3_c-20261019T0809" });
+    return await f.GetAsync(alertId, ct) is { } rec ? Results.Ok(rec) : Results.NotFound();
+});
+
+// A supervisor accepts the diagnosis or overrides it with the cause they found. Kept next to the
+// recorded investigation so agreement can be measured later.
+api.MapPost("/investigations/{alertId}/review", async (string alertId, ReviewRequest req, InvestigationFiles f, CancellationToken ct) =>
+{
+    if (!alertIdPattern.IsMatch(alertId)) return Results.BadRequest(new { error = "bad alertId" });
+    if (req.Problem() is { } problem) return Results.BadRequest(new { error = problem });
+    var rec = await f.GetAsync(alertId, ct);
+    if (rec is null) return Results.NotFound();
+    var diagnosed = rec["diagnosis"]?["root_cause"]?.GetValue<string>() ?? "unclear";
+    return Results.Ok(await f.SaveReviewAsync(alertId, req, diagnosed, ct));
+});
 
 api.MapGet("/data-quality", async (IGoldStore s, CancellationToken ct) => Results.Ok(await s.GetDataQualityAsync(ct)));
 
