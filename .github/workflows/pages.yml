@@ -34,11 +34,13 @@ jobs:
       - name: Investigate every alert (LLM agent if GEMINI_API_KEY is set, else deterministic investigator)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
         run: python scripts/investigate_alerts.py
 
       - name: Write shift-handover notes (LLM agent if GEMINI_API_KEY is set, else template)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
         run: python scripts/generate_handover.py
 
       - name: Build static site
