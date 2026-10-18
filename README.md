@@ -25,11 +25,37 @@ Per fault: slow oven-zone drift (+15 °C over 20 min) caught in 12 min; filler c
 was missed for the slow ramp. That is a property of the EWMA + 3-minute confirmation
 rule, and the threshold sweep below shows the trade-off.
 
-**Threshold sweep** (`python scripts/run_local.py --sweep`): lowering the oven threshold
-from 5 °C to 4 °C keeps 0 false alarms and cuts mean latency to 8.0 min; lowering the fill
-threshold to 0.6 g buys ~1 min but costs 5 false alarms per shift; 3 °C costs 23-28.
-The defaults (5 °C, 1.0 g) are chosen to keep false alarms at zero, because supervisors
-stop trusting a noisy alarm.
+### Across 10 shifts (`python scripts/evaluate_seeds.py --seeds 10`)
+
+One shift is an anecdote, so the full pipeline is rerun for 10 simulator seeds: the same
+three faults, with different sensor noise and process wander each time.
+
+| Metric | Result |
+| --- | --- |
+| Faults detected | **30 / 30** |
+| Detection latency | mean **8.5 min**, p50 9, p90 13, max 14 |
+| False alarms | **0** in all 10 shifts |
+| Quarantine and dedup exact | in every shift |
+
+| Fault | Fastest | Slowest |
+| --- | --- | --- |
+| F1 slow oven drift (+15 °C over 20 min) | 7 min | 14 min |
+| F2 filler creeping 3 g heavy | 8 min | 11 min |
+| F3 burner step (-12 °C) | 3 min | 5 min |
+
+**Threshold trade-off** (false alarms summed over the 10 shifts):
+
+| Oven / fill threshold | Mean latency | False alarms |
+| --- | --- | --- |
+| 3 °C / 1.0 g | 7.0 min | 182 |
+| 4 °C / 1.0 g | 7.9 min | 4 |
+| **5 °C / 1.0 g (default)** | **8.5 min** | **0** |
+| 5 °C / 0.6 g | 7.7 min | 51 |
+| 8 °C / 1.0 g | 10.4 min | 0 |
+
+The single-shift sweep made 4 °C look free (0 false alarms). Across 10 shifts it costs 4,
+which is why the default is 5 °C: supervisors stop trusting an alarm that cries wolf, and
+the extra 0.6 min of latency is cheap by comparison.
 
 ## How it works
 
@@ -136,15 +162,14 @@ Inputs are validated against allow-lists and all SQL is parameterized.
 2. A second line whose feed uses different field names, to exercise `_rescued_data`
    schema-drift quarantine (the legacy-plant integration problem).
 3. MLflow-tracked anomaly model compared against the EWMA baseline on the same scorecard.
-4. Multi-seed evaluation (latency and false alarms as distributions, not one shift).
-5. Shift-handover summary written by an LLM that may only cite gold-table queries.
+4. Shift-handover summary written by an LLM that may only cite gold-table queries.
 
 ## Layout
 
 ```
 src/linepulse/   simulator, pipeline (bronze/silver/gold), store (UC or local), evaluate
 notebooks/       Databricks notebooks: 00 setup, 01 simulate, 02 pipeline, 03 evaluate, 99 reset
-scripts/         run_local.py (whole pipeline on your machine), smoke_api.sh
+scripts/         run_local.py (whole pipeline on your machine), evaluate_seeds.py, smoke_api.sh
 tests/           pytest suite + fake Databricks SQL endpoint
 api/             .NET 8 minimal API + dashboard (wwwroot)
 databricks.yml   optional Asset Bundle for the scheduled job
