@@ -45,6 +45,12 @@ SENSOR_BOUNDS = {
     "proofer_rh_pct": (0.0, 100.0),
 }
 OVEN_SENSORS = ["oven_z1_c", "oven_z2_c", "oven_z3_c"]
+TELEMETRY_SIGNALS = OVEN_SENSORS + ["belt_speed_mpm", "proofer_rh_pct"]
+
+# How root causes show up in the simulated process (see simulator.py).
+OVEN_HEAT_PER_MPM_SLOWDOWN = 5.0     # deg C every zone gains per m/min the belt runs slow (less dough load)
+BAKE_DEFECT_PER_MPM_SLOWDOWN = 0.03  # extra bake-defect probability per m/min of slowdown (longer bake)
+FAILING_SENSOR_NOISE_FACTOR = 2.5    # a drifting thermocouple also reads noisier
 
 # Checkweigher: label weight is what the pack declares; target is where the filler aims.
 LABEL_WEIGHT_G = 90.0
@@ -69,6 +75,8 @@ DETECTOR = {
         "oven_z2_c": 5.0,
         "oven_z3_c": 5.0,
         "fill_weight_g": 1.0,  # deviation of mean accepted weight from TARGET_WEIGHT_G
+        "belt_speed_mpm": 0.3,  # normal wander is about 0.05 m/min
+        "proofer_rh_pct": 6.0,  # wide alarm band; mostly context for investigations
     },
 }
 

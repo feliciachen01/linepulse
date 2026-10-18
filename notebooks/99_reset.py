@@ -14,7 +14,7 @@ assert dbutils.widgets.get("confirm") == "yes", "Set confirm = yes to delete Lin
 # COMMAND ----------
 
 for t in ["bronze_events", "silver_telemetry", "silver_units", "silver_quarantine", "gold_signal_minute",
-          "gold_alerts", "gold_shift_kpis", "gold_line_status", "gold_dq_summary"]:
+          "gold_alerts", "gold_quality_minute", "gold_shift_kpis", "gold_line_status", "gold_dq_summary"]:
     spark.sql(f"DROP TABLE IF EXISTS {catalog}.{schema}.{t}")
 for d in ["landing", "ground_truth", "_checkpoints"]:
     dbutils.fs.rm(f"/Volumes/{catalog}/{schema}/raw/{d}", recurse=True)

@@ -55,7 +55,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 var lineIdPattern = new Regex("^L[0-9]{1,3}$", RegexOptions.Compiled);
-string[] signals = ["oven_z1_c", "oven_z2_c", "oven_z3_c", "fill_weight_g"];
+string[] signals = ["oven_z1_c", "oven_z2_c", "oven_z3_c", "fill_weight_g", "belt_speed_mpm", "proofer_rh_pct"];
 string[] alertStatuses = ["open", "closed"];
 
 app.MapGet("/health", (IGoldStore store) => Results.Ok(new { status = "ok", mode = store.Mode }));

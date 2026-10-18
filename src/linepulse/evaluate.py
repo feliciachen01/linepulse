@@ -37,12 +37,15 @@ def score_alerts(alerts: pd.DataFrame, truth: dict, data_until: datetime | None 
     matched_alerts = set()
     per_fault = []
     for f in faults:
-        m = alerts[(alerts.line_id == f["line_id"]) & (alerts.signal == f["signal"])
+        # A belt slowdown also heats every oven zone, so its alerts can be on several signals.
+        signals = f.get("signals") or [f["signal"]]
+        m = alerts[(alerts.line_id == f["line_id"]) & (alerts.signal.isin(signals))
                    & (alerts.end_minute >= f["onset"]) & (alerts.start_minute <= f["window_end"])]
         matched_alerts.update(m.alert_id)
         first = m.sort_values("detected_at").head(1)
         latency = None if first.empty else round((first.detected_at.iloc[0] - f["onset"]).total_seconds() / 60, 1)
         per_fault.append({"fault_id": f["fault_id"], "line_id": f["line_id"], "signal": f["signal"],
+                          "cause": f.get("cause"),
                           "kind": f["kind"], "magnitude": f["magnitude"], "detected": latency is not None,
                           "latency_min": latency, "alerts": len(m)})
     false_alarms = alerts[~alerts.alert_id.isin(matched_alerts)]
@@ -90,7 +93,7 @@ def threshold_sweep(minutes: pd.DataFrame, truth: dict, oven_thresholds=(3, 4, 5
     a, k = C.DETECTOR["alpha"], C.DETECTOR["min_consecutive"]
     for ot in oven_thresholds:
         for ft in fill_thresholds:
-            thr = {s: ot for s in C.OVEN_SENSORS} | {"fill_weight_g": ft}
+            thr = C.DETECTOR["thresholds"] | {s: ot for s in C.OVEN_SENSORS} | {"fill_weight_g": ft}
             s = score_alerts(alerts_from_minutes(minutes, a, thr, k), truth, data_until=data_until)
             out.append({"oven_threshold_c": ot, "fill_threshold_g": ft, "detected": s["detected"],
                         "faults": s["faults"], "mean_latency_min": s["mean_latency_min"],

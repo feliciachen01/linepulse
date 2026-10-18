@@ -8,8 +8,7 @@ lakehouse that turns line telemetry into drift alerts, shift KPIs and recall-rea
 lot lists, served by a .NET 8 API and dashboard. Runs entirely on free tiers.
 
 **[Open the live demo](https://feliciachen01.github.io/linepulse/)**: a static snapshot of the
-dashboard over 24 simulated hours, identical to the run on Databricks. Click an alert to chart
-the excursion behind it.
+dashboard over 24 simulated hours. Click an alert to chart the excursion behind it.
 
 [![LinePulse dashboard: line status, the shift-handover note with every figure checked, drift alerts](docs/dashboard.png)](https://feliciachen01.github.io/linepulse/)
 
@@ -19,9 +18,28 @@ the excursion behind it.
   tables, and a checker confirms every number, time and lot ID it writes came from those tools
 - **Stack:** Auto Loader, Delta, Unity Catalog, Spark Structured Streaming, .NET 8 minimal API, GitHub Actions
 
-> **Simulated data.** Two naan lines, three injected faults, deliberate bad records
-> and duplicate deliveries. Because every fault is injected on purpose, detection is
-> *scored*, not claimed. All plant numbers are illustrative assumptions, not FGF data.
+> **Simulated data.** Two naan lines, injected faults with known root causes, deliberate
+> bad records and duplicate deliveries. Because every fault is injected on purpose, detection
+> is *scored*, not claimed. All plant numbers are illustrative assumptions, not FGF data.
+
+### The simulated day
+
+Each fault has a root cause, and each cause leaves a different footprint across the line's
+signals. That matters because the same alarm, "oven zone 2 running hot", can have three causes:
+
+| Root cause | What the sensors show | What the product shows |
+| --- | --- | --- |
+| Burner fault | one zone hot or cold | bake defects rise |
+| Thermocouple drift | one zone reads hot or cold, and noisier | nothing changes: the oven is fine |
+| Belt slowdown | belt speed drops, every zone reads hotter (less dough load) | fewer packs per minute, bake defects rise |
+| Filler drift | pack weight moves | giveaway (heavy) or underweight rejects (light) |
+
+The default 24-hour day (seed 7) injects eight faults. Shift A's three are unchanged from the
+first release, so its results below stay comparable; shifts B and C add five more, including
+two lines alarming on a hot oven zone 13 minutes apart for different reasons (a drifting
+thermocouple on L1, a slowing belt on L2). Over the full day: **8 / 8 faults detected, mean
+10.4 min, 0 false alarms**. The slowest catch is the drifting thermocouple (23 min): it creeps
+up slowly by design.
 
 ## Results (one simulated 8-hour shift, 86,879 events)
 
@@ -76,7 +94,8 @@ the extra 0.6 min of latency is cheap by comparison.
 
 The same pipeline, run on Databricks serverless (Auto Loader, Delta, Unity Catalog) in
 several incremental chunks, covering **24 simulated hours**: three shifts, with the faults
-injected in the first shift only, so the other 16 hours are a clean false-alarm test.
+injected in the first shift only, so the other 16 hours are a clean false-alarm test. (This
+was the default day before root causes were added; shift A is identical in both.)
 
 | Metric | Live result |
 | --- | --- |
