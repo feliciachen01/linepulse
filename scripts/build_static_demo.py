@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "api" / "LinePulse.Api" / "wwwroot" / "index.html"
 # The last scenario executed live on Databricks, whose gold tables matched a local run row for
 # row. Update after re-running the notebooks on a new scenario.
-LIVE_RUN = {"minutes": 1440, "faults": 3}
+LIVE_RUN = {"minutes": 1440, "faults": 8}
 
 
 def load(export: Path, table: str) -> list[dict]:
