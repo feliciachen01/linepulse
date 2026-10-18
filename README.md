@@ -57,6 +57,36 @@ The single-shift sweep made 4 °C look free (0 false alarms). Across 10 shifts i
 which is why the default is 5 °C: supervisors stop trusting an alarm that cries wolf, and
 the extra 0.6 min of latency is cheap by comparison.
 
+### Live run on Databricks Free Edition
+
+The same pipeline, run on Databricks serverless (Auto Loader, Delta, Unity Catalog) in
+several incremental chunks, covering **24 simulated hours**: three shifts, with the faults
+injected in the first shift only, so the other 16 hours are a clean false-alarm test.
+
+| Metric | Live result |
+| --- | --- |
+| Events ingested | 260,543 |
+| Faults detected | **3 / 3** |
+| Detection latency | mean **8.3 min**, max 12 (F1 12, F2 10, F3 3) |
+| False alarms over 24 h (defaults 5 °C / 1.0 g) | **0** |
+| Bad records quarantined | **526 / 526** |
+| Duplicate deliveries removed | **1,343 / 1,343** |
+| Last incremental pipeline run (bronze → silver → gold) | 56.3 s on serverless |
+| Matches the locally tested pipeline | **identical**: scorecard and all 15 threshold-sweep rows equal a local run of the same 1,440 minutes |
+
+| Oven / fill threshold | Mean latency | False alarms in 24 h |
+| --- | --- | --- |
+| 3 °C / 1.0 g | 7.3 min | 51 |
+| 4 °C / 1.0 g | 8.0 min | 2 |
+| **5 °C / 1.0 g (default)** | **8.3 min** | **0** |
+| 5 °C / 0.6 g | 7.3 min | 19 |
+| 8 °C / 1.0 g | 9.3 min | 0 |
+
+Getting there took two serverless-only fixes the local tests could not see, both now
+covered by regression tests: functions shipped to workers must not reference a module
+imported from a Git folder (its workspace loader cannot be pickled), and the sweep must
+handle a run where no fault has started yet.
+
 ## How it works
 
 ```
@@ -84,7 +114,7 @@ Needs Python 3.11+, Java 17+, .NET 8 SDK - or open the repo in **GitHub Codespac
 ```bash
 pip install -r requirements.txt
 python scripts/run_local.py --minutes 480 --chunks 8 --sweep   # simulate a shift, build gold, print scorecard
-pytest -q                                                       # 7 tests, ~2 min
+pytest -q                                                       # 14 tests, ~2 min
 cd api/LinePulse.Api && dotnet run                              # open http://localhost:5000 (port printed on start)
 ```
 
@@ -96,9 +126,12 @@ everything runs the same, with MERGE emulated by an anti-join.
 1. Sign up at Databricks Free Edition (no credit card). Non-commercial use only.
 2. **Workspace > Create > Git folder**, paste this repo's URL.
 3. Run `notebooks/00_setup` once (creates `workspace.linepulse` and the `raw` volume).
-4. Run `01_simulate` (default 60 minutes of data), then `02_pipeline`, then `03_evaluate`.
-   Repeat 01 → 02 to watch alerts appear incrementally.
-5. Optional: **Jobs > Create job** with tasks 01 → 02 → 03 on a 15-minute schedule, or
+4. Attach each notebook to **Serverless** compute (the only option on Free Edition).
+5. Run `01_simulate` (default 60 minutes of data), then `02_pipeline`, then `03_evaluate`.
+   Repeat 01 → 02 to watch alerts appear incrementally. Set `minutes` = 480 for a full
+   shift. Changing a widget can re-run the notebook: to stop that, set the widget panel's
+   gear icon to "Do nothing" on widget change. Each run of 01 appends more data.
+6. Optional: **Jobs > Create job** with tasks 01 → 02 → 03 on a 15-minute schedule, or
    deploy `databricks.yml` with the Databricks CLI. Keep it paused when you are not demoing:
    going over Free Edition quota stops compute until the quota resets.
 
@@ -148,13 +181,15 @@ Inputs are validated against allow-lists and all SQL is parameterized.
 
 ## Tested here
 
-- 7 pytest tests: chunked simulation equals a single run, DQ rules name every failure,
-  end-to-end detection + idempotent rerun, Spark and pandas detectors agree.
+- 14 pytest tests: chunked simulation equals a single run, DQ rules name every failure,
+  end-to-end detection + idempotent rerun, Spark and pandas detectors agree, shipped
+  functions pickle without importable modules, sweep handles runs with no alerts.
 - The pipeline also runs over **Spark Connect** with workers that cannot import the
   package, the same condition as Databricks serverless.
 - API: 12 smoke checks in Local mode, and in Databricks mode against a fake Statement
   Execution API (`tests/fake_databricks.py`) that returns the real response shape.
-- Not yet run on a live Databricks workspace: do that first (steps above).
+- Live on Databricks Free Edition serverless: results identical to the local run (above).
+  The API has not yet been pointed at the live SQL warehouse.
 
 ## Next steps
 
