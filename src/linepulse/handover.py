@@ -28,7 +28,9 @@ SIGNAL_NAMES = {"oven_z1_c": ("oven zone 1", "°C"), "oven_z2_c": ("oven zone 2"
                 "belt_speed_mpm": ("belt speed", "m/min"), "proofer_rh_pct": ("proofer humidity", "%")}
 
 DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
-DEFAULT_MODEL = "gemini-2.5-flash"
+# Google retires models for new keys over time (gemini-2.5-flash now 404s for new users).
+# Override with LLM_MODEL; scripts/list_models.py shows what your key can use.
+DEFAULT_MODEL = "gemini-3.8-flash"
 
 
 # ---------------------------------------------------------------- tools over gold data
@@ -399,6 +401,7 @@ def client_from_env() -> ChatClient | None:
     key = os.environ.get("LLM_API_KEY") or os.environ.get("GEMINI_API_KEY")
     if not key:
         return None
-    return ChatClient(base_url=os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL), api_key=key,
-                      model=os.environ.get("LLM_MODEL", DEFAULT_MODEL),
-                      min_interval_s=float(os.environ.get("LLM_MIN_INTERVAL_S", "6.5")))
+    # "or": an unset GitHub Actions variable arrives as an empty string, which means "use the default".
+    return ChatClient(base_url=os.environ.get("LLM_BASE_URL") or DEFAULT_BASE_URL, api_key=key,
+                      model=os.environ.get("LLM_MODEL") or DEFAULT_MODEL,
+                      min_interval_s=float(os.environ.get("LLM_MIN_INTERVAL_S") or "6.5"))

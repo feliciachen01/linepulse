@@ -233,7 +233,12 @@ GEMINI_API_KEY=... python scripts/generate_handover.py   # or no key: template w
 ```
 
 **Model.** It uses any OpenAI-compatible chat API (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`).
-The default is Google's Gemini free tier (`gemini-2.5-flash`), which needs no credit card.
+The default is Google's Gemini API (`gemini-3.8-flash`), whose free tier needs no credit card.
+Google retires models for new keys over time and free-tier limits differ a lot by model (Gemini
+3.8 Flash allows about 20 requests a day; Flash-Lite models allow far more), so run
+`python scripts/list_models.py` to see what your key can use, then `export LLM_MODEL=<name>`. For
+the `pages` workflow, set it as a repository variable `LLM_MODEL` (**Settings > Secrets and
+variables > Actions > Variables**).
 To use it for the live demo, create a key at Google AI Studio and add it to the repo under
 **Settings > Secrets and variables > Actions** as `GEMINI_API_KEY`. The `pages` workflow then
 writes the notes with the LLM on every deploy. Free-tier prompts may be used by Google to
