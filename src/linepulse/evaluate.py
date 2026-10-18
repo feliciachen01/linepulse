@@ -75,6 +75,9 @@ def alerts_from_minutes(minutes: pd.DataFrame, alpha: float, thresholds: dict, k
         if len(run) >= k:
             rows.append((line, signal, run[0], run[-1]))
     df = pd.DataFrame(rows, columns=["line_id", "signal", "start_minute", "last_over"])
+    # With no alerts the columns are empty "object" columns; force datetimes so .dt works.
+    df["start_minute"] = pd.to_datetime(df["start_minute"])
+    df["last_over"] = pd.to_datetime(df["last_over"])
     df["detected_at"] = df["start_minute"] + pd.Timedelta(minutes=k)
     df["end_minute"] = df["last_over"] + pd.Timedelta(minutes=1)
     df["alert_id"] = df["line_id"] + "-" + df["signal"] + "-" + df["start_minute"].dt.strftime("%Y%m%dT%H%M")
@@ -82,13 +85,13 @@ def alerts_from_minutes(minutes: pd.DataFrame, alpha: float, thresholds: dict, k
 
 
 def threshold_sweep(minutes: pd.DataFrame, truth: dict, oven_thresholds=(3, 4, 5, 6, 8),
-                    fill_thresholds=(0.6, 1.0, 1.5)) -> pd.DataFrame:
+                    fill_thresholds=(0.6, 1.0, 1.5), data_until: datetime | None = None) -> pd.DataFrame:
     out = []
     a, k = C.DETECTOR["alpha"], C.DETECTOR["min_consecutive"]
     for ot in oven_thresholds:
         for ft in fill_thresholds:
             thr = {s: ot for s in C.OVEN_SENSORS} | {"fill_weight_g": ft}
-            s = score_alerts(alerts_from_minutes(minutes, a, thr, k), truth)
+            s = score_alerts(alerts_from_minutes(minutes, a, thr, k), truth, data_until=data_until)
             out.append({"oven_threshold_c": ot, "fill_threshold_g": ft, "detected": s["detected"],
                         "faults": s["faults"], "mean_latency_min": s["mean_latency_min"],
                         "false_alarms": s["false_alarms"]})

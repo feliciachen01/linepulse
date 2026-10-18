@@ -18,7 +18,7 @@ import json
 import shutil
 import statistics
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -106,7 +106,8 @@ def main(argv=None):
     for seed in seeds:
         store, score = run_shift(spark, out / f"seed_{seed}", origin, a.minutes, engine=a.engine, seed=seed, verbose=False)
         truth = json.loads((out / f"seed_{seed}" / "ground_truth" / "faults.json").read_text())
-        sweeps.append(evaluate.threshold_sweep(store.read("gold_signal_minute").toPandas(), truth))
+        sweeps.append(evaluate.threshold_sweep(store.read("gold_signal_minute").toPandas(), truth,
+                                              data_until=origin + timedelta(minutes=a.minutes)))
         scores.append(score)
         print(f"seed {seed}: detected {score['detected']}/{score['faults']}, "
               f"latency {[f['latency_min'] for f in score['per_fault']]}, false alarms {score['false_alarms']}")
