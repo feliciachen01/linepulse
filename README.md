@@ -11,10 +11,12 @@ lot lists, served by a .NET 8 API and dashboard. Runs entirely on free tiers.
 dashboard over 24 simulated hours, identical to the run on Databricks. Click an alert to chart
 the excursion behind it.
 
-[![LinePulse dashboard serving live gold tables from Databricks SQL](docs/dashboard-live.png)](https://feliciachen01.github.io/linepulse/)
+[![LinePulse dashboard: line status, the shift-handover note with every figure checked, drift alerts](docs/dashboard.png)](https://feliciachen01.github.io/linepulse/)
 
 - **Live on Databricks Free Edition:** 3/3 injected faults caught, mean 8.3 min, 0 false alarms in 24 h
 - **Measured, not claimed:** 30/30 faults across 10 simulated shifts; every bad record quarantined
+- **Shift-handover agent:** an LLM writes the end-of-shift note through tool calls over the gold
+  tables, and a checker confirms every number, time and lot ID it writes came from those tools
 - **Stack:** Auto Loader, Delta, Unity Catalog, Spark Structured Streaming, .NET 8 minimal API, GitHub Actions
 
 > **Simulated data.** Two naan lines, three injected faults, deliberate bad records
@@ -102,7 +104,7 @@ handle a run where no fault has started yet.
 
 ### Live dashboard (.NET 8 API on the Databricks SQL warehouse)
 
-The screenshot at the top is this setup. The API runs in a GitHub Codespace and reads the gold tables through the Databricks SQL
+[This screenshot](docs/dashboard-live.png) is the API on the live warehouse (earlier page design). The API runs in a GitHub Codespace and reads the gold tables through the Databricks SQL
 Statement Execution API with a personal access token. The dashboard shows both lines, the
 three drift alerts with the lots made during each excursion, and KPIs for all three shifts.
 
@@ -113,6 +115,39 @@ three drift alerts with the lots made during each excursion, and KPIs for all th
 
 The cache is there because gold only changes when the pipeline runs; every cache hit is a
 query the Free Edition warehouse does not have to run.
+
+## Shift-handover agent
+
+At the end of each shift the incoming supervisor needs four things: what drifted, when, which
+lots to check, and how the shift went. The agent writes that note.
+
+1. **Tools, not raw data.** The model gets five read-only tools over the gold tables
+   (`list_shifts`, `get_shift_kpis`, `get_shift_alerts`, `get_line_status`, `get_data_quality`)
+   and is told to copy figures from them, never compute or estimate.
+2. **Every figure is checked.** After the model answers, a checker extracts every number, clock
+   time, date and lot ID from the note and matches it against the tool results (allowing only the
+   rounding the note shows, so 17.27 may be written 17.3).
+3. **One correction round.** If a figure is not found, the model is told which ones and asked to
+   rewrite once. Still wrong: the note is published marked "needs review", with the bad figures
+   highlighted in red on the dashboard.
+4. **Graceful fallback.** With no API key, or if the API fails, a fixed template writes the note
+   from the same tools, and the dashboard says so.
+
+The dashboard shows the result: checked figures have a dotted underline, the header says how many
+were checked, and "How this note was written and checked" lists the tool calls.
+
+```bash
+python scripts/run_local.py --minutes 1440            # gold tables
+GEMINI_API_KEY=... python scripts/generate_handover.py   # or no key: template writer
+```
+
+**Model.** It uses any OpenAI-compatible chat API (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`).
+The default is Google's Gemini free tier (`gemini-2.5-flash`), which needs no credit card.
+To use it for the live demo, create a key at Google AI Studio and add it to the repo under
+**Settings > Secrets and variables > Actions** as `GEMINI_API_KEY`. The `pages` workflow then
+writes the notes with the LLM on every deploy. Free-tier prompts may be used by Google to
+improve its products; the data here is simulated. Databricks Free Edition cannot call LLM APIs,
+so notes are generated outside Databricks and the API serves them from a file in both modes.
 
 ## How it works
 
@@ -141,7 +176,7 @@ Needs Python 3.11+, Java 17+, .NET 8 SDK - or open the repo in **GitHub Codespac
 ```bash
 pip install -r requirements.txt
 python scripts/run_local.py --minutes 480 --chunks 8 --sweep   # simulate a shift, build gold, print scorecard
-pytest -q                                                       # 16 tests, ~2 min
+pytest -q                                                       # 23 tests, ~2 min
 cd api/LinePulse.Api && dotnet run                              # open http://localhost:5000 (port printed on start)
 ```
 
@@ -189,6 +224,7 @@ LinePulse__Mode=Databricks dotnet run --project api/LinePulse.Api
 | `GET /api/shifts?lineId=` | shift KPIs: scrap %, rejects by reason, giveaway g/pack, kg, CAD |
 | `GET /api/signals/{lineId}/{signal}?minutes=` | per-minute mean, EWMA deviation, threshold |
 | `GET /api/data-quality` | quarantined records by rule |
+| `GET /api/handover` | shift-handover notes with figures checked/total, unverified figures, tool calls |
 
 Inputs are validated against allow-lists and all SQL is parameterized.
 
@@ -207,15 +243,20 @@ Inputs are validated against allow-lists and all SQL is parameterized.
   baseline any model must beat. The sweep makes the threshold a business decision.
 - **Why affected lots on every alert?** Recall scope is the expensive question after an
   excursion; answering it in seconds is the point.
+- **Why check the LLM's numbers instead of trusting it?** A handover with one wrong lot number
+  is worse than no handover. Grounding the model in tools narrows what it can say; the checker
+  proves what it did say, and the result is visible to the supervisor, not hidden in a log.
 - **Why cache in the API?** Gold only changes when the pipeline runs; each cache hit is a
   query the Free Edition warehouse does not run.
 
 ## Tested here
 
-- 16 pytest tests: chunked simulation equals a single run, DQ rules name every failure,
+- 23 pytest tests: chunked simulation equals a single run, DQ rules name every failure,
   end-to-end detection + idempotent rerun, Spark and pandas detectors agree, shipped
   functions pickle without importable modules, sweep handles runs with no alerts,
-  static demo files match the API's responses.
+  static demo files match the API's responses, and the handover agent (against a fake LLM
+  server): tool use, a hallucinated figure caught and fixed on retry, one left wrong marked for
+  review, API failure falling back to the template.
 - The pipeline also runs over **Spark Connect** with workers that cannot import the
   package, the same condition as Databricks serverless.
 - API: 12 smoke checks in Local mode, and in Databricks mode against a fake Statement
@@ -229,14 +270,16 @@ Inputs are validated against allow-lists and all SQL is parameterized.
 2. A second line whose feed uses different field names, to exercise `_rescued_data`
    schema-drift quarantine (the legacy-plant integration problem).
 3. MLflow-tracked anomaly model compared against the EWMA baseline on the same scorecard.
-4. Shift-handover summary written by an LLM that may only cite gold-table queries.
+4. Score the handover agent over many runs (share of notes fully verified, retries needed),
+   the same way the detector is scored.
 
 ## Layout
 
 ```
-src/linepulse/   simulator, pipeline (bronze/silver/gold), store (UC or local), evaluate
+src/linepulse/   simulator, pipeline (bronze/silver/gold), store (UC or local), evaluate, handover (agent)
 notebooks/       Databricks notebooks: 00 setup, 01 simulate, 02 pipeline, 03 evaluate, 99 reset
-scripts/         run_local.py (whole pipeline on your machine), evaluate_seeds.py, build_static_demo.py, smoke_api.sh
+scripts/         run_local.py (whole pipeline on your machine), evaluate_seeds.py, generate_handover.py,
+                 build_static_demo.py, smoke_api.sh
 tests/           pytest suite + fake Databricks SQL endpoint
 api/             .NET 8 minimal API + dashboard (wwwroot)
 databricks.yml   optional Asset Bundle for the scheduled job
