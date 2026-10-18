@@ -1,0 +1,6 @@
+# Local harness + tests. On Databricks only the notebooks' runtime is used.
+pyspark==4.0.1
+delta-spark==4.0.0
+pandas>=2.1,<3
+pyarrow>=14
+pytest>=8

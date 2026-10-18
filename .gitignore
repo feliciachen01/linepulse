@@ -1,0 +1,11 @@
+local_data/
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+*.pyc
+bin/
+obj/
+.databricks/
+.env
+.DS_Store

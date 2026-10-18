@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinePulse</title>
+<style>
+  :root {
+    --page: #f9f9f7; --surface: #fcfcfb; --border: #e4e3de; --grid: #ecebe6;
+    --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #77766f;
+    --series: #2a78d6; --band: rgba(42,120,214,.08);
+    --good: #0ca30c; --warning: #b37a00; --critical: #d03b3b;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d; --surface: #1a1a19; --border: #2f2f2c; --grid: #2a2a27;
+      --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #94938b;
+      --series: #3987e5; --band: rgba(57,135,229,.14);
+      --good: #2fbf2f; --warning: #fab219; --critical: #e66767;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+           padding: 20px 24px 8px; max-width: 1180px; margin: 0 auto; }
+  header h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  header .meta { color: var(--ink-2); font-size: 13px; }
+  header .badge { font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em;
+                  border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px; color: var(--ink-2); }
+  main { max-width: 1180px; margin: 0 auto; padding: 8px 24px 40px; display: grid; gap: 16px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .panel h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--ink-2);
+              text-transform: uppercase; letter-spacing: .05em; }
+  .lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .line-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .line-head strong { font-size: 16px; }
+  .line-head .sku { color: var(--ink-2); font-size: 12px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;
+          padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; }
+  .pill.OK { color: var(--good); } .pill.WARN { color: var(--warning); } .pill.ALERT { color: var(--critical); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 12px; margin-top: 14px; }
+  .stat .k { color: var(--ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .stat .v { font: 600 17px/1.2 var(--mono); }
+  .stat .v small { font-weight: 400; color: var(--ink-2); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--ink-3); font-weight: 600; font-size: 11px; text-transform: uppercase;
+       letter-spacing: .04em; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  td { padding: 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  td.num, th.num { text-align: right; font-family: var(--mono); }
+  tr.pick { cursor: pointer; } tr.pick:hover td { background: var(--band); }
+  tr.sel td { background: var(--band); }
+  .lots { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+  .scroll { overflow-x: auto; }
+  .chart-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+  .chart-head .t { font-weight: 600; }
+  .chart-head .s { color: var(--ink-2); font-size: 12px; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+           border-radius: 6px; padding: 4px 8px; }
+  #chart { position: relative; margin-top: 8px; }
+  #chart svg { display: block; width: 100%; height: 260px; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+         border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+         white-space: nowrap; display: none; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-2); font-size: 12px; margin-top: 6px; }
+  .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 6px; }
+  .grid2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+  main > *, .grid2 > *, .lines > * { min-width: 0; }
+  @media (max-width: 600px) {
+    header, main { padding-left: 16px; padding-right: 16px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+  .err { color: var(--critical); font-family: var(--mono); font-size: 13px; white-space: pre-wrap; }
+  .note { color: var(--ink-3); font-size: 12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>LinePulse</h1>
+  <span class="badge" id="mode">…</span>
+  <span class="meta" id="asof">Loading gold tables…</span>
+</header>
+<main>
+  <div id="error" class="err" hidden></div>
+  <section class="lines" id="lines"></section>
+
+  <section class="panel">
+    <div class="chart-head">
+      <div><div class="t" id="chart-title">Signal</div>
+        <div class="s" id="chart-sub">Per-minute mean, EWMA deviation and alert threshold</div></div>
+      <div class="controls">
+        <select id="sel-line" aria-label="Line"></select>
+        <select id="sel-signal" aria-label="Signal">
+          <option value="oven_z1_c">Oven zone 1 (°C)</option>
+          <option value="oven_z2_c">Oven zone 2 (°C)</option>
+          <option value="oven_z3_c">Oven zone 3 (°C)</option>
+          <option value="fill_weight_g">Fill weight (g)</option>
+        </select>
+        <select id="sel-window" aria-label="Time window">
+          <option value="120">Last 2 h</option><option value="240">Last 4 h</option>
+          <option value="480" selected>Last 8 h</option>
+        </select>
+      </div>
+    </div>
+    <div id="chart"><div class="tip" id="tip"></div></div>
+    <div class="legend">
+      <span><i style="background:var(--series)"></i>Per-minute mean</span>
+      <span><i style="background:var(--ink-3)"></i>Setpoint</span>
+      <span><i style="background:var(--band);height:10px"></i>Setpoint ± alert threshold</span>
+      <span><i style="background:var(--critical);height:6px;border-radius:3px"></i>Over threshold (EWMA)</span>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>Drift alerts</h2>
+      <div class="scroll"><table id="alerts"></table></div>
+      <p class="note">Click an alert to chart its signal. Lots are every lot produced while the excursion lasted.</p>
+    </section>
+    <section class="panel">
+      <h2>Data quality (quarantined)</h2>
+      <table id="dq"></table>
+      <p class="note">Records failing a rule are kept in silver_quarantine with the rule names, never dropped.</p>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>Shift KPIs</h2>
+    <div class="scroll"><table id="shifts"></table></div>
+    <p class="note">Giveaway = accepted weight above the 90 g label. Cost uses an illustrative CAD 2.50/kg.</p>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? "–").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (v, d = 1) => v == null ? "–" : Number(v).toLocaleString(undefined, {minimumFractionDigits: d, maximumFractionDigits: d});
+const hm = iso => iso ? new Date(iso).toISOString().slice(11, 16) : "–";
+const SIGNAL = {oven_z1_c: ["Oven zone 1", "°C"], oven_z2_c: ["Oven zone 2", "°C"], oven_z3_c: ["Oven zone 3", "°C"], fill_weight_g: ["Fill weight", "g"]};
+const ICON = {OK: "●", WARN: "▲", ALERT: "■"};
+
+async function get(path) {
+  const r = await fetch(path);
+  if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error(`${path}: ${r.status} ${b.title || ""}`); }
+  return r.json();
+}
+
+function renderLines(lines) {
+  $("#lines").innerHTML = lines.map(l => `
+    <article class="panel">
+      <div class="line-head">
+        <div><strong>${esc(l.line_id)}</strong> <span class="sku">${esc(l.product)}</span></div>
+        <span class="pill ${esc(l.status)}">${ICON[l.status] || ""} ${esc(l.status)}</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="k">Zone 1</div><div class="v">${fmt(l.oven_z1_c)}<small> °C</small></div></div>
+        <div class="stat"><div class="k">Zone 2</div><div class="v">${fmt(l.oven_z2_c)}<small> °C</small></div></div>
+        <div class="stat"><div class="k">Zone 3</div><div class="v">${fmt(l.oven_z3_c)}<small> °C</small></div></div>
+        <div class="stat"><div class="k">Fill weight</div><div class="v">${fmt(l.fill_weight_g, 2)}<small> g</small></div></div>
+        <div class="stat"><div class="k">Scrap, 15 min</div><div class="v">${fmt(l.scrap_rate_15m_pct, 2)}<small> %</small></div></div>
+        <div class="stat"><div class="k">Open alerts</div><div class="v">${esc(l.open_alerts)}</div></div>
+      </div>
+      <p class="note">Current lot ${esc(l.current_lot)} · data as of ${hm(l.as_of)} UTC</p>
+    </article>`).join("");
+  $("#sel-line").innerHTML = lines.map(l => `<option>${esc(l.line_id)}</option>`).join("");
+  if (lines[0]) $("#asof").textContent = `Data as of ${new Date(lines[0].as_of).toISOString().replace("T", " ").slice(0, 16)} UTC`;
+}
+
+function renderAlerts(alerts) {
+  $("#alerts").innerHTML = `<tr><th>Line</th><th>Signal</th><th>Start</th><th>Detected</th>
+      <th class="num">Min</th><th class="num">Peak dev</th><th class="num">Packs</th><th>Affected lots</th></tr>` +
+    (alerts.length ? alerts.map(a => `<tr class="pick" data-line="${esc(a.line_id)}" data-signal="${esc(a.signal)}">
+      <td>${esc(a.line_id)}</td><td>${esc(SIGNAL[a.signal]?.[0] || a.signal)} <span class="sku">${esc(a.direction)}, ${esc(a.status)}</span></td>
+      <td>${hm(a.start_minute)}</td><td>${hm(a.detected_at)}</td>
+      <td class="num">${esc(a.duration_min)}</td><td class="num">${fmt(a.peak_abs_dev, 1)} ${SIGNAL[a.signal]?.[1] || ""}</td>
+      <td class="num">${Number(a.units_in_window).toLocaleString()}</td>
+      <td class="lots">${a.affected_lots.map(esc).join("<br>")}</td></tr>`).join("")
+     : `<tr><td colspan="8">No alerts.</td></tr>`);
+  document.querySelectorAll("#alerts tr.pick").forEach(tr => tr.onclick = () => {
+    $("#sel-line").value = tr.dataset.line; $("#sel-signal").value = tr.dataset.signal; drawChart();
+  });
+}
+
+function renderShifts(rows) {
+  $("#shifts").innerHTML = `<tr><th>Line</th><th>Date</th><th>Shift</th><th class="num">Packs</th><th class="num">Scrap %</th>
+      <th class="num">Underweight</th><th class="num">Bake defect</th><th class="num">Avg weight g</th>
+      <th class="num">Giveaway g/pack</th><th class="num">Giveaway kg</th><th class="num">Giveaway CAD</th><th class="num">Alerts</th></tr>` +
+    rows.map(k => `<tr><td>${esc(k.line_id)}</td><td>${esc(k.shift_date)}</td><td>${esc(k.shift)}</td>
+      <td class="num">${Number(k.units).toLocaleString()}</td><td class="num">${fmt(k.scrap_rate_pct, 2)}</td>
+      <td class="num">${esc(k.rejects_underweight)}</td><td class="num">${esc(k.rejects_bake_defect)}</td>
+      <td class="num">${fmt(k.avg_accepted_weight_g, 2)}</td><td class="num">${fmt(k.giveaway_g_per_pack, 2)}</td>
+      <td class="num">${fmt(k.giveaway_kg, 1)}</td><td class="num">${fmt(k.giveaway_cost_cad, 2)}</td>
+      <td class="num">${esc(k.alerts)}</td></tr>`).join("");
+}
+
+function renderDq(rows) {
+  $("#dq").innerHTML = `<tr><th>Rule</th><th>Event</th><th class="num">Records</th></tr>` +
+    rows.map(r => `<tr><td>${esc(r.rule)}</td><td>${esc(r.event_type)}</td><td class="num">${esc(r.records)}</td></tr>`).join("");
+}
+
+async function drawChart() {
+  const line = $("#sel-line").value, signal = $("#sel-signal").value, win = $("#sel-window").value;
+  const [name, unit] = SIGNAL[signal];
+  $("#chart-title").textContent = `${line} · ${name}`;
+  const rows = await get(`/api/signals/${line}/${signal}?minutes=${win}`);
+  const host = $("#chart"), tip = $("#tip");
+  host.querySelector("svg")?.remove();
+  if (!rows.length) { $("#chart-sub").textContent = "No data yet."; return; }
+  const sp = rows[0].setpoint, thr = rows[0].threshold;
+  const overN = rows.filter(r => r.over).length;
+  $("#chart-sub").textContent = `Setpoint ${fmt(sp, 1)} ${unit}, alert when EWMA deviation ≥ ${fmt(thr, 1)} ${unit} for 3 min · ${overN} minutes over threshold`;
+
+  const W = host.clientWidth || 800, H = 260, m = {l: 52, r: 16, t: 12, b: 28};
+  const t = rows.map(r => Date.parse(r.minute)), v = rows.map(r => r.mean_value);
+  // "Nice" ticks: round steps on the value axis, whole hours (or half hours) on time.
+  const rawLo = Math.min(...v, sp - thr), rawHi = Math.max(...v, sp + thr);
+  const span = rawHi - rawLo || 1, mag = 10 ** Math.floor(Math.log10(span / 4));
+  const step = [1, 2, 2.5, 5, 10].map(f => f * mag).find(st => span / st <= 5);
+  const lo = Math.floor(rawLo / step) * step, hi = Math.ceil(rawHi / step) * step;
+  const X = x => m.l + (x - t[0]) / Math.max(1, t.at(-1) - t[0]) * (W - m.l - m.r);
+  const Y = y => m.t + (1 - (y - lo) / (hi - lo)) * (H - m.t - m.b);
+  const yt = []; for (let y = lo; y <= hi + step / 2; y += step) yt.push(y);
+  const hours = (t.at(-1) - t[0]) / 36e5, every = (hours > 4 ? 2 : hours > 2 ? 1 : 0.5) * 36e5 * (W < 500 ? 2 : 1);
+  const xt = []; for (let x = Math.ceil(t[0] / every) * every; x <= t.at(-1); x += every) xt.push(x);
+  const path = rows.map((r, i) => `${i ? "L" : "M"}${X(t[i]).toFixed(1)},${Y(r.mean_value).toFixed(1)}`).join("");
+  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(line)} ${esc(name)} per-minute mean over time">
+    ${yt.map(y => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(y)}" y2="${Y(y)}" stroke="var(--grid)"/>
+      <text x="${m.l - 8}" y="${Y(y) + 4}" text-anchor="end" font-size="11" fill="var(--ink-3)">${fmt(y, step < 1 ? 1 : 0)}</text>`).join("")}
+    ${xt.map(x => `<text x="${X(x)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--ink-3)">${hm(new Date(x).toISOString())}</text>`).join("")}
+    <rect x="${m.l}" width="${W - m.l - m.r}" y="${Y(sp + thr)}" height="${Y(sp - thr) - Y(sp + thr)}" fill="var(--band)"/>
+    <line x1="${m.l}" x2="${W - m.r}" y1="${Y(sp)}" y2="${Y(sp)}" stroke="var(--ink-3)" stroke-dasharray="4 4"/>
+    <path d="${path}" fill="none" stroke="var(--series)" stroke-width="2" stroke-linejoin="round"/>
+    ${rows.map((r, i) => r.over ? `<circle cx="${X(t[i])}" cy="${Y(r.mean_value)}" r="3" fill="var(--critical)" stroke="var(--surface)" stroke-width="1"/>` : "").join("")}
+    <line id="xh" y1="${m.t}" y2="${H - m.b}" stroke="var(--ink-3)" visibility="hidden"/>
+    <rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent" id="hit"/>
+  </svg>`;
+  host.insertAdjacentHTML("afterbegin", svg);
+  const s = host.querySelector("svg"), xh = s.querySelector("#xh");
+  s.querySelector("#hit").onmousemove = e => {
+    const box = s.getBoundingClientRect(), px = (e.clientX - box.left) * (W / box.width);
+    let i = 0, best = Infinity;
+    t.forEach((x, k) => { const d = Math.abs(X(x) - px); if (d < best) { best = d; i = k; } });
+    const r = rows[i];
+    xh.setAttribute("x1", X(t[i])); xh.setAttribute("x2", X(t[i])); xh.setAttribute("visibility", "visible");
+    tip.style.display = "block";
+    tip.innerHTML = `<b>${hm(r.minute)} UTC</b><br>Mean ${fmt(r.mean_value, 2)} ${unit}<br>EWMA dev ${fmt(r.ewma_dev, 2)} ${unit}${r.over ? " · over" : ""}`;
+    const left = Math.min((X(t[i]) / W) * box.width + 12, box.width - tip.offsetWidth - 4);
+    tip.style.left = left + "px"; tip.style.top = "8px";
+  };
+  s.querySelector("#hit").onmouseleave = () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); };
+}
+
+async function load() {
+  try {
+    const [health, lines, alerts, shifts, dq] = await Promise.all(
+      ["/health", "/api/lines", "/api/alerts?limit=50", "/api/shifts", "/api/data-quality"].map(get));
+    $("#error").hidden = true;
+    $("#mode").textContent = health.mode === "databricks" ? "Databricks SQL" : "Local export";
+    const keepLine = $("#sel-line").value;
+    renderLines(lines); renderAlerts(alerts); renderShifts(shifts); renderDq(dq);
+    if (keepLine) $("#sel-line").value = keepLine;
+    else if (alerts[0]) { $("#sel-line").value = alerts[0].line_id; $("#sel-signal").value = alerts[0].signal; }
+    await drawChart();
+  } catch (e) {
+    $("#error").hidden = false; $("#error").textContent = e.message;
+  }
+}
+["#sel-line", "#sel-signal", "#sel-window"].forEach(s => $(s).onchange = () => drawChart().catch(e => { $("#error").hidden = false; $("#error").textContent = e.message; }));
+window.addEventListener("resize", () => drawChart().catch(() => {}));
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>

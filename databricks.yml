@@ -1,0 +1,49 @@
+# Databricks Asset Bundle (optional): deploys the LinePulse job from the CLI / CI.
+#   databricks bundle validate && databricks bundle deploy && databricks bundle run linepulse_shift
+# Not validated against a live workspace yet: run `databricks bundle validate` first.
+# No cluster is defined, so tasks run on serverless compute (the only option on Free Edition).
+bundle:
+  name: linepulse
+
+variables:
+  catalog:
+    default: workspace
+  schema:
+    default: linepulse
+
+resources:
+  jobs:
+    linepulse_shift:
+      name: linepulse-shift
+      # Every 15 minutes while you demo. PAUSED by default to protect Free Edition quota.
+      schedule:
+        quartz_cron_expression: "0 0/15 * * * ?"
+        timezone_id: UTC
+        pause_status: PAUSED
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+      tasks:
+        - task_key: simulate
+          notebook_task:
+            notebook_path: ./notebooks/01_simulate.py
+            base_parameters:
+              minutes: "15"
+        - task_key: pipeline
+          depends_on:
+            - task_key: simulate
+          notebook_task:
+            notebook_path: ./notebooks/02_pipeline.py
+        - task_key: evaluate
+          depends_on:
+            - task_key: pipeline
+          notebook_task:
+            notebook_path: ./notebooks/03_evaluate.py
+
+targets:
+  dev:
+    mode: development
+    default: true

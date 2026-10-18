@@ -1,0 +1,15 @@
+{
+  "name": "linepulse",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": { "version": "17" },
+    "ghcr.io/devcontainers/features/dotnet:2": { "version": "8.0" }
+  },
+  "postCreateCommand": "pip install -r requirements.txt",
+  "forwardPorts": [5080],
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-dotnettools.csdevkit", "databricks.databricks"]
+    }
+  }
+}
