@@ -96,6 +96,12 @@ def main(argv=None):
     a = p.parse_args(argv)
 
     client = client_from_env() if a.llm_max else None
+    if a.llm_max and client is None:
+        sys.exit("--llm-max is set but no GEMINI_API_KEY (or LLM_API_KEY) is in the environment. "
+                 "In the same shell: export GEMINI_API_KEY=your-key, then rerun.")
+    print(f"LLM agent: {client.model} at {client.base_url}, up to {a.llm_max} incidents" if client
+          else "LLM agent: not run (no --llm-max)")
+    llm_failures, llm_streak = 0, 0
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     rows, incidents, false_alarms, llm_figs, rules_figs = [], 0, 0, [0, 0], [0, 0]
@@ -122,7 +128,17 @@ def main(argv=None):
                    "lookup": LOOKUP.get(alert["signal"], "unclear"), "rules": rules["diagnosis"]["root_cause"]}
             if first and client is not None and sum("llm" in r for r in rows) < a.llm_max:
                 rec = investigate(tools, alert["alert_id"], client, truth, log=lambda *x: None)
-                if rec["writer"] == "llm":
+                if rec["writer"] != "llm":
+                    llm_failures += 1
+                    llm_streak += 1
+                    print(f"  LLM failed on {alert['alert_id']}: {rec['llm_error']}")
+                    if llm_streak >= 3:
+                        print("  3 LLM failures in a row: stopping LLM calls (check the key, model name and quota).")
+                        client = None
+                else:
+                    llm_streak = 0
+                    print(f"  LLM {alert['alert_id']}: {rec['diagnosis']['root_cause']} (truth {t['cause']}), "
+                          f"{rec['figures_verified']}/{rec['figures_total']} figures verified, {rec['seconds']} s")
                     row["llm"] = rec["diagnosis"]["root_cause"]
                     row["llm_status"] = rec["status"]
                     llm_figs[0] += rec["figures_verified"]
@@ -132,6 +148,8 @@ def main(argv=None):
               f"(rules {sum(r['rules'] == r['truth'] for r in rows)}/{len(rows)} so far, {time.time() - t0:.0f} s)")
 
     llm_rows = [r for r in rows if "llm" in r]
+    if a.llm_max:
+        print(f"\nLLM investigated {len(llm_rows)} incidents, {llm_failures} failed and fell back to rules.")
     firsts = [r for r in rows if r["first"]]
     summary = {
         "days": a.days, "incidents": incidents, "incidents_detected": len(firsts), "alerts_scored": len(rows),
