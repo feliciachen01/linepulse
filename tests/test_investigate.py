@@ -70,7 +70,7 @@ def _diagnosis(tools, alert_id, **over):
     a = tools.get_alert(alert_id)
     q = tools.get_product_quality(a["line_id"], a["window_start"], a["window_end"])
     d = {"root_cause": "thermocouple_drift", "confidence": "high",
-         "summary": f"{a['line_id']} oven zone 2 reads {a['peak_deviation']} °C high but the product is unchanged.",
+         "summary": f"{a['line_id']} oven zone 2 reads {a['peak_smoothed_deviation']} °C high but the product is unchanged.",
          "evidence": [f"Bake defects {q['during']['bake_defects_per_1000']} per 1,000 packs vs "
                       f"{q['before']['bake_defects_per_1000']} before."],
          "ruled_out": [{"cause": "burner_fault", "why": "No rise in bake defects."}],

@@ -89,3 +89,10 @@ def test_template_without_key_covers_every_alert_and_line():
     rec = template_note(GoldTools(GOLD), "2026-10-19", "A")
     assert "lots 005, 006" in rec["note"] and "28,737 packs" in rec["note"]
     assert rec["verification"].unverified == []
+
+
+def test_template_carries_the_investigation_agents_probable_cause():
+    gold = GOLD | {"gold_investigations": [{"alert_id": "x", "diagnosis": {"root_cause": "burner_fault", "confidence": "high"}}]}
+    res = template_note(GoldTools(gold), "2026-10-19", "A")
+    assert "Probable cause: burner fault (high confidence)." in res["note"]
+    assert res["verification"].unverified == []

@@ -81,7 +81,7 @@ class IncidentTools:
                     for n in ("gold_alerts", "gold_signal_minute", "gold_quality_minute")})
 
     SPECS = [
-        {"name": "get_alert", "description": "The alert being investigated: line, signal, direction, when, how far off, lots made.",
+        {"name": "get_alert", "description": "The alert being investigated: line, signal, direction, when, how far off (smoothed, as the detector saw it), lots made.",
          "parameters": {"type": "object", "properties": {"alert_id": {"type": "string"}}, "required": ["alert_id"]}},
         {"name": "get_signal_window",
          "description": "One signal around the alert: deviation from setpoint before and during, whether it changed "
@@ -144,7 +144,7 @@ class IncidentTools:
         return {"alert_id": alert_id, "line_id": a.line_id, "signal": a.signal, "signal_name": name, "unit": unit,
                 "direction": a.direction, "status": a.status, "started": _hm(a.start_minute),
                 "detected": _hm(a.detected_at), "ended": _hm(a.end_minute), "duration_min": int(a.duration_min),
-                "peak_deviation": _r(a.peak_abs_dev, nd), "alarm_threshold": _r(a.threshold, nd),
+                "peak_smoothed_deviation": _r(a.peak_abs_dev, nd), "alarm_threshold": _r(a.threshold, nd),
                 "window_start": _iso(a.start_minute), "window_end": _iso(a.end_minute),
                 "affected_lots": lots, "lot_numbers": [x.rsplit("-", 1)[-1] for x in lots],
                 "packs_in_window": int(a.units_in_window), "rejects_in_window": int(a.rejects_in_window)}

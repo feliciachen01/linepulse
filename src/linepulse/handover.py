@@ -54,12 +54,17 @@ class GoldTools:
 
     def __init__(self, gold: dict[str, list[dict]]):
         self.gold = gold
+        # Diagnoses from the investigation agent, if it has run: alert_id -> diagnosis.
+        self.diagnoses = {r["alert_id"]: r["diagnosis"] for r in gold.get("gold_investigations", [])}
 
     @classmethod
     def from_export(cls, export_dir: str | Path) -> "GoldTools":
         d = Path(export_dir)
         names = ["gold_shift_kpis", "gold_alerts", "gold_line_status", "gold_dq_summary"]
-        return cls({n: json.loads((d / f"{n}.json").read_text()) for n in names})
+        gold = {n: json.loads((d / f"{n}.json").read_text()) for n in names}
+        if (d / "gold_investigations.json").exists():
+            gold["gold_investigations"] = json.loads((d / "gold_investigations.json").read_text())
+        return cls(gold)
 
     SPECS = [
         {"name": "list_shifts", "description": "List the shifts that have data, oldest first.",
@@ -70,7 +75,8 @@ class GoldTools:
              "shift_date": {"type": "string", "description": "YYYY-MM-DD, the date the shift started"},
              "shift": {"type": "string", "enum": ["A", "B", "C"]}}, "required": ["shift_date", "shift"]}},
         {"name": "get_shift_alerts",
-         "description": "Drift alerts that started during one shift: what drifted, when, how far, lots made during it.",
+         "description": "Drift alerts that started during one shift: what drifted, when, how far, lots made during it, "
+                        "and the probable cause if the investigation agent has diagnosed it.",
          "parameters": {"type": "object", "properties": {
              "shift_date": {"type": "string"}, "shift": {"type": "string", "enum": ["A", "B", "C"]}},
              "required": ["shift_date", "shift"]}},
@@ -130,8 +136,15 @@ class GoldTools:
                 "lot_numbers": [lot.rsplit("-", 1)[-1] for lot in a["affected_lots"]],
                 "packs_in_window": a["units_in_window"],
                 "rejects_in_window": a["rejects_in_window"], "status": a["status"],
+                **self._cause(a["alert_id"]),
             })
         return out
+
+    def _cause(self, alert_id: str) -> dict:
+        d = self.diagnoses.get(alert_id)
+        if not d:
+            return {}
+        return {"probable_cause": d["root_cause"].replace("_", " "), "cause_confidence": d["confidence"]}
 
     def get_line_status(self) -> list[dict]:
         return [{"line_id": r["line_id"], "product": r["product"], "status": r["status"],
@@ -226,7 +239,8 @@ SYSTEM_PROMPT = """You write the end-of-shift handover note for the incoming bak
 Use the tools to fetch facts. Rules:
 - Every number, clock time, date and lot ID you write must be copied from a tool result. Do not
   add, subtract, average or estimate numbers yourself; totals are provided by get_shift_kpis.
-- Do not guess causes. Say what drifted, when, how far, which lots were made during it.
+- Do not guess causes. Say what drifted, when, how far, which lots were made during it. If an
+  alert has a probable_cause from the investigation agent, give it and its confidence.
 - If a shift had no alerts, say so plainly.
 - Format: a one-line headline, then short bullets: Issues, Numbers, For the next shift.
   At most 130 words. Plain markdown, no tables."""
@@ -335,7 +349,9 @@ def template_note(tools: GoldTools, shift_date: str, shift: str) -> dict:
     for a in alerts:
         lines.append(f"- {a['line_id']} {a['signal']} ran {a['direction']} from {a['started']} to {a['ended']}, "
                      f"up to {a['peak_deviation']} {a['unit']} off setpoint (alert at {a['detected']}). "
-                     f"Check {_lots(a['lot_numbers'])}.")
+                     f"Check {_lots(a['lot_numbers'])}."
+                     + (f" Probable cause: {a['probable_cause']} ({a['cause_confidence']} confidence)."
+                        if a.get("probable_cause") else ""))
     lines += ["", "**Numbers**"]
     for r in k["lines"]:
         lines.append(f"- {r['line_id']}: {r['packs']:,} packs, {r['scrap_rate_pct']}% scrap, "
