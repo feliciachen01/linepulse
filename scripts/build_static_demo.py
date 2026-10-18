@@ -63,6 +63,9 @@ def build(export: Path, out: Path, repo_url: str) -> dict:
     write("alerts.json", alerts)
     write("shifts.json", shifts)
     write("data-quality.json", dq)
+    handover = export / "gold_handover.json"
+    notes = json.loads(handover.read_text()) if handover.exists() else []
+    write("handover.json", sorted(notes, key=lambda n: (n["shift_date"], n["shift"]), reverse=True))
     for (line, signal), rows in signals.items():
         write(f"signals/{line}/{signal}.json", sorted(rows, key=lambda r: r["minute"]))
 

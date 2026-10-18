@@ -65,3 +65,22 @@ public sealed record DqSummary(
     [property: JsonPropertyName("event_type")] string EventType,
     [property: JsonPropertyName("rule")] string Rule,
     [property: JsonPropertyName("records")] long Records);
+
+public sealed record ToolCall(
+    [property: JsonPropertyName("tool")] string Tool,
+    [property: JsonPropertyName("args")] System.Text.Json.JsonElement Args,
+    [property: JsonPropertyName("ms")] double Ms);
+
+/// <summary>One shift-handover note written by scripts/generate_handover.py (LLM agent or template).</summary>
+public sealed record HandoverNote(
+    [property: JsonPropertyName("shift_date")] string ShiftDate,
+    [property: JsonPropertyName("shift")] string Shift,
+    [property: JsonPropertyName("writer")] string Writer,
+    [property: JsonPropertyName("model")] string? Model,
+    [property: JsonPropertyName("note")] string Note,
+    [property: JsonPropertyName("figures_total")] int FiguresTotal,
+    [property: JsonPropertyName("figures_verified")] int FiguresVerified,
+    [property: JsonPropertyName("unverified")] List<string> Unverified,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("retried")] bool Retried,
+    [property: JsonPropertyName("tool_calls")] List<ToolCall> ToolCalls);
