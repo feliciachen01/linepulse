@@ -8,14 +8,19 @@ lakehouse that turns line telemetry into drift alerts, shift KPIs and recall-rea
 lot lists, served by a .NET 8 API and dashboard. Runs entirely on free tiers.
 
 **[Open the live demo](https://feliciachen01.github.io/linepulse/)**: a static snapshot of the
-dashboard over 24 simulated hours. Click an alert to chart the excursion behind it.
+dashboard over 24 simulated hours. Press **Investigate** on any alert to replay how the agent
+worked out its cause.
 
-[![LinePulse dashboard: line status, the shift-handover note with every figure checked, drift alerts](docs/dashboard.png)](https://feliciachen01.github.io/linepulse/)
+[![The investigation agent's diagnosis of an oven alarm: a drifting thermocouple, not a burner fault, because the product did not change](docs/investigation.png)](https://feliciachen01.github.io/linepulse/)
 
+- **Incident-investigation agent:** an alarm says *what* drifted; the agent works out *why*. It
+  gathers evidence through tools over the gold tables, names a root cause, rules others out and
+  recommends actions. Scored on 240 injected incidents with known causes: an alarm lookup table
+  gets **177**, and gets every drifting thermocouple wrong
 - **Live on Databricks Free Edition:** 3/3 injected faults caught, mean 8.3 min, 0 false alarms in 24 h
 - **Measured, not claimed:** 30/30 faults across 10 simulated shifts; every bad record quarantined
-- **Shift-handover agent:** an LLM writes the end-of-shift note through tool calls over the gold
-  tables, and a checker confirms every number, time and lot ID it writes came from those tools
+- **Shift-handover agent:** an LLM writes the end-of-shift note through tool calls, including each
+  alert's probable cause, and a checker confirms every number, time and lot ID came from the tools
 - **Stack:** Auto Loader, Delta, Unity Catalog, Spark Structured Streaming, .NET 8 minimal API, GitHub Actions
 
 > **Simulated data.** Two naan lines, injected faults with known root causes, deliberate
@@ -36,7 +41,7 @@ signals. That matters because the same alarm, "oven zone 2 running hot", can hav
 
 The default 24-hour day (seed 7) injects eight faults. Shift A's three are unchanged from the
 first release, so its results below stay comparable; shifts B and C add five more, including
-two lines alarming on a hot oven zone 13 minutes apart for different reasons (a drifting
+two lines alarming on a hot oven zone 19 minutes apart for different reasons (a drifting
 thermocouple on L1, a slowing belt on L2). Over the full day: **8 / 8 faults detected, mean
 10.4 min, 0 false alarms**. The slowest catch is the drifting thermocouple (23 min): it creeps
 up slowly by design.
@@ -135,10 +140,74 @@ three drift alerts with the lots made during each excursion, and KPIs for all th
 The cache is there because gold only changes when the pipeline runs; every cache hit is a
 query the Free Edition warehouse does not have to run.
 
+## Incident-investigation agent
+
+A drift alert says "L2 oven zone 1 is running hot". The supervisor needs to know what to do about
+it: call maintenance for the burner, recalibrate a thermocouple, check the belt drive, or leave the
+oven alone. In the simulated day, two lines alarm on a hot oven within 20 minutes of each other: on
+L1 the oven is fine and its thermocouple is drifting; on L2 the belt is slowing down. Adjusting
+either burner would make things worse.
+
+![Alert list: each alert shows its probable cause and an Investigate button](docs/alerts.png)
+
+**How it works** (`src/linepulse/investigate.py`):
+
+1. **Evidence tools over gold.** `get_alert`, `get_signal_window` (shape of the excursion, reading
+   noise vs a baseline hour), `compare_line_signals` (every oven zone, belt speed, proofer, fill weight,
+   before vs during), `get_product_quality` (packs per minute, bake-defect and underweight rejects per
+   1,000), `get_related_alerts` (same line, other line, history). Tools return pre-computed changes and
+   ratios so the model never does arithmetic.
+2. **A structured diagnosis.** Root cause (`burner_fault`, `thermocouple_drift`, `belt_slowdown`,
+   `filler_drift` or `unclear`), confidence, evidence, causes ruled out and why, recommended actions.
+   The model is given a plant troubleshooting guide (what a sensor fault vs a real process change looks
+   like), not rules about this data.
+3. **Checked like the handover.** Every figure in the diagnosis must appear in a tool result; one
+   correction round, then "needs review". No API key, or the API fails: a deterministic investigator
+   with the same tools takes over.
+4. **Recorded and replayed.** Each run is stored step by step (why, which tool, what came back). The
+   dashboard replays it, then the supervisor can **Accept** or **Override** with the cause they found
+   (`POST /api/investigations/{alertId}/review`). Because the data is simulated, the page then shows the
+   injected ground truth.
+
+**How often it is right** (`python scripts/evaluate_investigations.py --days 30`): 30 random simulated
+days, 240 incidents with random causes, lines, zones, directions and sizes. Each incident's first alert
+is investigated and scored against the injected root cause.
+
+| Method | Correct root cause |
+| --- | --- |
+| Alarm lookup table (oven alarm = burner, belt = belt, fill = filler) | 177 / 240 (74%) |
+| Deterministic investigator | 239 / 240 |
+| LLM agent (Gemini 2.5 Flash, free tier) | run it with a key: see below |
+
+| True cause | Incidents | Lookup table | Deterministic investigator |
+| --- | --- | --- | --- |
+| Burner fault | 76 | 76 | 76 |
+| Thermocouple drift | 60 | **0** | 59 |
+| Belt slowdown | 51 | 48 | 51 |
+| Filler drift | 53 | 53 | 53 |
+
+Read this honestly. The lookup table is what an alarm list gives you without investigating: right
+whenever the alarm's signal is the cause, wrong on every drifting sensor. The deterministic
+investigator was written by the same person who wrote the simulator, so its score mostly shows the
+evidence is sufficient; it is the fallback, not the point. Its one miss is instructive: a 3-minute
+alert covered only 180 packs, and 4 random bake defects looked like a threefold rise. The LLM agent's
+score is the real test, because it only gets general plant knowledge. Free-tier quota is limited, so
+it is evaluated on demand and the result is committed:
+
+```bash
+GEMINI_API_KEY=... python scripts/evaluate_investigations.py --days 30 --llm-max 30 --save docs/investigation_eval.json
+```
+
+The dashboard's accuracy section reads `docs/investigation_eval.json`. The `pages` workflow
+investigates the demo day's alerts with the LLM on every deploy when `GEMINI_API_KEY` is set.
+
 ## Shift-handover agent
 
 At the end of each shift the incoming supervisor needs four things: what drifted, when, which
-lots to check, and how the shift went. The agent writes that note.
+lots to check, and how the shift went. The agent writes that note, including each alert's probable
+cause from the investigation agent.
+
+![Dashboard: line status and the shift-handover note with every figure checked](docs/dashboard.png)
 
 1. **Tools, not raw data.** The model gets five read-only tools over the gold tables
    (`list_shifts`, `get_shift_kpis`, `get_shift_alerts`, `get_line_status`, `get_data_quality`)
@@ -156,7 +225,8 @@ The dashboard shows the result: checked figures have a dotted underline, the hea
 were checked, and "How this note was written and checked" lists the tool calls.
 
 ```bash
-python scripts/run_local.py --minutes 1440            # gold tables
+python scripts/run_local.py --minutes 1440               # gold tables
+GEMINI_API_KEY=... python scripts/investigate_alerts.py  # or no key: deterministic investigator
 GEMINI_API_KEY=... python scripts/generate_handover.py   # or no key: template writer
 ```
 
@@ -181,11 +251,16 @@ simulator ──JSON files──> landing (UC volume)
         silver_telemetry  silver_units  silver_quarantine (failed rule names)
                  └──────┬─────┘
                         ▼  per-minute means -> EWMA (applyInPandas) -> gaps-and-islands
-   gold_signal_minute · gold_alerts (+ affected lots) · gold_shift_kpis · gold_line_status · gold_dq_summary
+   gold_signal_minute · gold_alerts (+ affected lots) · gold_quality_minute · gold_shift_kpis · ...
                         │  Databricks SQL Statement Execution API (parameterized, cached 60 s)
                         ▼
               .NET 8 minimal API  ──>  dashboard (served by the API)
+                        ▲
+   investigation agent + handover agent (LLM tool calls over gold, outside Databricks) ──> JSON files
 ```
+
+Databricks Free Edition cannot call LLM APIs, so both agents run outside it (a laptop, a Codespace,
+GitHub Actions) on the exported gold tables, and the API serves what they wrote in both modes.
 
 ## Run it locally (no cloud account needed)
 
@@ -195,7 +270,7 @@ Needs Python 3.11+, Java 17+, .NET 8 SDK - or open the repo in **GitHub Codespac
 ```bash
 pip install -r requirements.txt
 python scripts/run_local.py --minutes 480 --chunks 8 --sweep   # simulate a shift, build gold, print scorecard
-pytest -q                                                       # 23 tests, ~2 min
+pytest -q                                                       # 35 tests, ~2 min
 cd api/LinePulse.Api && dotnet run                              # open http://localhost:5000 (port printed on start)
 ```
 
@@ -244,6 +319,10 @@ LinePulse__Mode=Databricks dotnet run --project api/LinePulse.Api
 | `GET /api/signals/{lineId}/{signal}?minutes=` | per-minute mean, EWMA deviation, threshold |
 | `GET /api/data-quality` | quarantined records by rule |
 | `GET /api/handover` | shift-handover notes with figures checked/total, unverified figures, tool calls |
+| `GET /api/investigations` | one row per alert: probable cause, confidence, who investigated, review |
+| `GET /api/investigations/{alertId}` | the recorded investigation: steps, diagnosis, figure check, ground truth |
+| `POST /api/investigations/{alertId}/review` | `{"decision": "accept"}` or `{"decision": "override", "root_cause": ..., "note": ...}` |
+| `GET /api/investigations/evaluation` | diagnosis accuracy vs injected causes (lookup, rules, LLM) |
 
 Inputs are validated against allow-lists and all SQL is parameterized.
 
@@ -265,12 +344,21 @@ Inputs are validated against allow-lists and all SQL is parameterized.
 - **Why check the LLM's numbers instead of trusting it?** A handover with one wrong lot number
   is worse than no handover. Grounding the model in tools narrows what it can say; the checker
   proves what it did say, and the result is visible to the supervisor, not hidden in a log.
+- **Why compare against a lookup table?** It is what an alarm list already gives a supervisor
+  for free. An investigation has to beat it to be worth reading, and the per-cause table shows where:
+  the alarms whose signal is not the cause.
+- **Why replay recorded runs instead of investigating live in the page?** The public demo must not
+  hold an API key, and a recorded run is auditable: the same steps a supervisor watched are the
+  steps that were scored.
 - **Why cache in the API?** Gold only changes when the pipeline runs; each cache hit is a
   query the Free Edition warehouse does not run.
 
 ## Tested here
 
-- 23 pytest tests: chunked simulation equals a single run, DQ rules name every failure,
+- 35 pytest tests: chunked simulation equals a single run, each root cause leaves its own
+  footprint (a drifting sensor never changes the product), the pandas reference gold equals Spark
+  gold, the investigation agent against a fake LLM server (steps recorded, an invented figure sent
+  back and corrected, a non-JSON answer or API error falling back to rules), DQ rules name every failure,
   end-to-end detection + idempotent rerun, Spark and pandas detectors agree, shipped
   functions pickle without importable modules, sweep handles runs with no alerts,
   static demo files match the API's responses, and the handover agent (against a fake LLM
@@ -278,7 +366,7 @@ Inputs are validated against allow-lists and all SQL is parameterized.
   review, API failure falling back to the template.
 - The pipeline also runs over **Spark Connect** with workers that cannot import the
   package, the same condition as Databricks serverless.
-- API: 12 smoke checks in Local mode, and in Databricks mode against a fake Statement
+- API: 22 smoke checks in Local mode (including investigation reviews), and in Databricks mode against a fake Statement
   Execution API (`tests/fake_databricks.py`) that returns the real response shape.
 - Live on Databricks Free Edition serverless: results identical to the local run (above).
   The .NET API has served the live gold tables from the Databricks SQL warehouse (above).
@@ -290,15 +378,19 @@ Inputs are validated against allow-lists and all SQL is parameterized.
    schema-drift quarantine (the legacy-plant integration problem).
 3. MLflow-tracked anomaly model compared against the EWMA baseline on the same scorecard.
 4. Score the handover agent over many runs (share of notes fully verified, retries needed),
-   the same way the detector is scored.
+   the same way the detector and the investigation agent are scored.
+5. Harder incidents for the investigation agent: two causes at once on one line, and a gas-supply
+   fault that hits both lines (the "shared cause" `get_related_alerts` already looks for).
 
 ## Layout
 
 ```
-src/linepulse/   simulator, pipeline (bronze/silver/gold), store (UC or local), evaluate, handover (agent)
+src/linepulse/   simulator, pipeline (bronze/silver/gold), store (UC or local), evaluate,
+                 investigate (investigation agent), handover (agent), reference (pandas gold for fast scoring)
 notebooks/       Databricks notebooks: 00 setup, 01 simulate, 02 pipeline, 03 evaluate, 99 reset
-scripts/         run_local.py (whole pipeline on your machine), evaluate_seeds.py, generate_handover.py,
-                 build_static_demo.py, smoke_api.sh
+scripts/         run_local.py (whole pipeline on your machine), evaluate_seeds.py, investigate_alerts.py,
+                 evaluate_investigations.py, generate_handover.py, build_static_demo.py, smoke_api.sh
+docs/            screenshots, investigation_eval.json (the committed diagnosis scorecard)
 tests/           pytest suite + fake Databricks SQL endpoint
 api/             .NET 8 minimal API + dashboard (wwwroot)
 databricks.yml   optional Asset Bundle for the scheduled job

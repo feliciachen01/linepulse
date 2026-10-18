@@ -1,0 +1,230 @@
+{
+  "days": 30,
+  "incidents": 240,
+  "incidents_detected": 240,
+  "alerts_scored": 411,
+  "false_alarms": 0,
+  "methods": {
+    "lookup": {
+      "n": 240,
+      "correct": 177,
+      "rate": 0.738,
+      "by_cause": {
+        "burner_fault": {
+          "n": 76,
+          "correct": 76
+        },
+        "thermocouple_drift": {
+          "n": 60,
+          "correct": 0
+        },
+        "belt_slowdown": {
+          "n": 51,
+          "correct": 48
+        },
+        "filler_drift": {
+          "n": 53,
+          "correct": 53
+        }
+      },
+      "confusion": {
+        "burner_fault": {
+          "burner_fault": 76,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "thermocouple_drift": {
+          "burner_fault": 60,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "belt_slowdown": {
+          "burner_fault": 3,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 48,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "filler_drift": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 53,
+          "unclear": 0
+        }
+      }
+    },
+    "rules": {
+      "n": 240,
+      "correct": 239,
+      "rate": 0.996,
+      "by_cause": {
+        "burner_fault": {
+          "n": 76,
+          "correct": 76
+        },
+        "thermocouple_drift": {
+          "n": 60,
+          "correct": 59
+        },
+        "belt_slowdown": {
+          "n": 51,
+          "correct": 51
+        },
+        "filler_drift": {
+          "n": 53,
+          "correct": 53
+        }
+      },
+      "confusion": {
+        "burner_fault": {
+          "burner_fault": 76,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "thermocouple_drift": {
+          "burner_fault": 1,
+          "thermocouple_drift": 59,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "belt_slowdown": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 51,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "filler_drift": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 53,
+          "unclear": 0
+        }
+      }
+    }
+  },
+  "all_alerts": {
+    "lookup": {
+      "n": 411,
+      "correct": 180,
+      "rate": 0.438,
+      "by_cause": {
+        "burner_fault": {
+          "n": 76,
+          "correct": 76
+        },
+        "thermocouple_drift": {
+          "n": 61,
+          "correct": 0
+        },
+        "belt_slowdown": {
+          "n": 221,
+          "correct": 51
+        },
+        "filler_drift": {
+          "n": 53,
+          "correct": 53
+        }
+      },
+      "confusion": {
+        "burner_fault": {
+          "burner_fault": 76,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "thermocouple_drift": {
+          "burner_fault": 61,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "belt_slowdown": {
+          "burner_fault": 170,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 51,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "filler_drift": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 53,
+          "unclear": 0
+        }
+      }
+    },
+    "rules": {
+      "n": 411,
+      "correct": 410,
+      "rate": 0.998,
+      "by_cause": {
+        "burner_fault": {
+          "n": 76,
+          "correct": 76
+        },
+        "thermocouple_drift": {
+          "n": 61,
+          "correct": 60
+        },
+        "belt_slowdown": {
+          "n": 221,
+          "correct": 221
+        },
+        "filler_drift": {
+          "n": 53,
+          "correct": 53
+        }
+      },
+      "confusion": {
+        "burner_fault": {
+          "burner_fault": 76,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "thermocouple_drift": {
+          "burner_fault": 1,
+          "thermocouple_drift": 60,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "belt_slowdown": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 221,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "filler_drift": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 53,
+          "unclear": 0
+        }
+      }
+    }
+  },
+  "figures": {
+    "rules": {
+      "verified": 3647,
+      "total": 3647
+    }
+  },
+  "llm_model": null
+}

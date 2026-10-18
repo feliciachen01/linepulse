@@ -28,6 +28,7 @@ import math
 import random
 import uuid
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -151,6 +152,17 @@ def lot_id_for(line_id: str, origin: datetime, ts: datetime) -> str:
     return f"{line_id}-{origin:%Y%m%d}-{n:03d}"
 
 
+@lru_cache(maxsize=None)
+def _wander_terms(seed: int, line_id: str, signal: str) -> tuple[tuple[float, float], ...]:
+    r = _rng(seed, "wander", line_id, signal)
+    terms = []
+    for _ in range(3):
+        period = r.uniform(25, 120)          # minutes
+        phase = r.uniform(0, 2 * math.pi)
+        terms.append((period, phase))
+    return tuple(terms)
+
+
 def wander(seed: int, line_id: str, signal: str, t_min: float) -> float:
     """Slow, smooth, stateless drift around setpoint: three sinusoids with seeded periods.
 
@@ -159,11 +171,8 @@ def wander(seed: int, line_id: str, signal: str, t_min: float) -> float:
     amp = C.WANDER_AMPLITUDE.get(signal, 0.0)
     if amp == 0.0:
         return 0.0
-    r = _rng(seed, "wander", line_id, signal)
     total = 0.0
-    for _ in range(3):
-        period = r.uniform(25, 120)          # minutes
-        phase = r.uniform(0, 2 * math.pi)
+    for period, phase in _wander_terms(seed, line_id, signal):
         total += math.sin(2 * math.pi * t_min / period + phase)
     return amp * total / 3 * 1.6             # ~amp at its typical peaks
 
