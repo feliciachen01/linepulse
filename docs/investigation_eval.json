@@ -110,6 +110,59 @@
           "unclear": 0
         }
       }
+    },
+    "llm": {
+      "n": 30,
+      "correct": 29,
+      "rate": 0.967,
+      "by_cause": {
+        "burner_fault": {
+          "n": 7,
+          "correct": 7
+        },
+        "thermocouple_drift": {
+          "n": 9,
+          "correct": 8
+        },
+        "belt_slowdown": {
+          "n": 8,
+          "correct": 8
+        },
+        "filler_drift": {
+          "n": 6,
+          "correct": 6
+        }
+      },
+      "confusion": {
+        "burner_fault": {
+          "burner_fault": 7,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "thermocouple_drift": {
+          "burner_fault": 1,
+          "thermocouple_drift": 8,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "belt_slowdown": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 8,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "filler_drift": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 6,
+          "unclear": 0
+        }
+      }
     }
   },
   "all_alerts": {
@@ -224,7 +277,119 @@
     "rules": {
       "verified": 3647,
       "total": 3647
+    },
+    "llm": {
+      "verified": 365,
+      "total": 365
     }
   },
-  "llm_model": null
+  "llm_model": "gemini-3.5-flash-lite",
+  "llm_subset": {
+    "lookup": {
+      "n": 30,
+      "correct": 21,
+      "rate": 0.7,
+      "by_cause": {
+        "burner_fault": {
+          "n": 7,
+          "correct": 7
+        },
+        "thermocouple_drift": {
+          "n": 9,
+          "correct": 0
+        },
+        "belt_slowdown": {
+          "n": 8,
+          "correct": 8
+        },
+        "filler_drift": {
+          "n": 6,
+          "correct": 6
+        }
+      },
+      "confusion": {
+        "burner_fault": {
+          "burner_fault": 7,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "thermocouple_drift": {
+          "burner_fault": 9,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "belt_slowdown": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 8,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "filler_drift": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 6,
+          "unclear": 0
+        }
+      }
+    },
+    "rules": {
+      "n": 30,
+      "correct": 30,
+      "rate": 1.0,
+      "by_cause": {
+        "burner_fault": {
+          "n": 7,
+          "correct": 7
+        },
+        "thermocouple_drift": {
+          "n": 9,
+          "correct": 9
+        },
+        "belt_slowdown": {
+          "n": 8,
+          "correct": 8
+        },
+        "filler_drift": {
+          "n": 6,
+          "correct": 6
+        }
+      },
+      "confusion": {
+        "burner_fault": {
+          "burner_fault": 7,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "thermocouple_drift": {
+          "burner_fault": 0,
+          "thermocouple_drift": 9,
+          "belt_slowdown": 0,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "belt_slowdown": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 8,
+          "filler_drift": 0,
+          "unclear": 0
+        },
+        "filler_drift": {
+          "burner_fault": 0,
+          "thermocouple_drift": 0,
+          "belt_slowdown": 0,
+          "filler_drift": 6,
+          "unclear": 0
+        }
+      }
+    }
+  }
 }
