@@ -7,8 +7,8 @@ serves. No server, no Databricks token: safe to publish.
     python scripts/run_local.py --minutes 1440
     python scripts/build_static_demo.py            # -> site/
 
-The default run (seed 7, 1,440 minutes, default thresholds) is the run that was executed
-live on Databricks Free Edition; its gold tables matched row for row, so the page says so.
+The page only claims to match the live Databricks Free Edition run when the snapshot is the
+same scenario that ran live (LIVE_RUN below: seed 7, 1,440 minutes, the same faults).
 """
 
 from __future__ import annotations
@@ -22,7 +22,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "api" / "LinePulse.Api" / "wwwroot" / "index.html"
-LIVE_RUN_MINUTES = 1440  # length of the live Databricks run the snapshot can be compared with
+# The last scenario executed live on Databricks, whose gold tables matched a local run row for
+# row. Update after re-running the notebooks on a new scenario.
+LIVE_RUN = {"minutes": 1440, "faults": 3}
 
 
 def load(export: Path, table: str) -> list[dict]:
@@ -43,7 +45,7 @@ def build(export: Path, out: Path, repo_url: str) -> dict:
     minutes = max(len(rows) for rows in signals.values())  # one row per signal per simulated minute
     meta = {
         "hours": round(minutes / 60),
-        "matches_live": minutes == LIVE_RUN_MINUTES,
+        "matches_live": minutes == LIVE_RUN["minutes"] and scorecard["faults"] == LIVE_RUN["faults"],
         "repo": repo_url,
         "scorecard": {k: scorecard[k] for k in ("faults", "detected", "mean_latency_min", "false_alarms")},
     }
