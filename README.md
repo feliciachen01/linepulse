@@ -8,7 +8,7 @@ lakehouse that turns line telemetry into drift alerts, shift KPIs and recall-rea
 lot lists, served by a .NET 8 API and dashboard. Runs entirely on free tiers.
 
 **[Open the live demo](https://feliciachen01.github.io/linepulse/)**: a static snapshot of the
-dashboard over 24 simulated hours. Press **Investigate** on any alert to replay how the agent
+dashboard over 24 simulated hours, identical to the run on Databricks. Press **Investigate** on any alert to replay how the agent
 worked out its cause.
 
 [![The investigation agent's diagnosis of an oven alarm: a drifting thermocouple, not a burner fault, because the product did not change](docs/investigation.png)](https://feliciachen01.github.io/linepulse/)
@@ -17,7 +17,7 @@ worked out its cause.
   gathers evidence through tools over the gold tables, names a root cause, rules others out and
   recommends actions. Scored on 240 injected incidents with known causes: an alarm lookup table
   gets **177**, and gets every drifting thermocouple wrong
-- **Live on Databricks Free Edition:** 3/3 injected faults caught, mean 8.3 min, 0 false alarms in 24 h
+- **Live on Databricks Free Edition:** 8/8 injected faults caught, mean 10.4 min, 0 false alarms in 24 h, identical to the local run
 - **Measured, not claimed:** 30/30 faults across 10 simulated shifts; every bad record quarantined
 - **Shift-handover agent:** an LLM writes the end-of-shift note through tool calls, including each
   alert's probable cause, and a checker confirms every number, time and lot ID came from the tools
@@ -97,29 +97,31 @@ the extra 0.6 min of latency is cheap by comparison.
 
 ### Live run on Databricks Free Edition
 
-The same pipeline, run on Databricks serverless (Auto Loader, Delta, Unity Catalog) in
-several incremental chunks, covering **24 simulated hours**: three shifts, with the faults
-injected in the first shift only, so the other 16 hours are a clean false-alarm test. (This
-was the default day before root causes were added; shift A is identical in both.)
+The same pipeline on Databricks serverless (Auto Loader, Delta, Unity Catalog) over the default
+**24 simulated hours**: three shifts and eight faults with root causes, including the two lines
+alarming on a hot oven for different reasons.
 
 | Metric | Live result |
 | --- | --- |
-| Events ingested | 260,543 |
-| Faults detected | **3 / 3** |
-| Detection latency | mean **8.3 min**, max 12 (F1 12, F2 10, F3 3) |
+| Events ingested | 259,517 |
+| Faults detected | **8 / 8** |
+| Detection latency | mean **10.4 min**, max 23 (the slowly drifting thermocouple, F4) |
 | False alarms over 24 h (defaults 5 °C / 1.0 g) | **0** |
-| Bad records quarantined | **526 / 526** |
-| Duplicate deliveries removed | **1,343 / 1,343** |
-| Last incremental pipeline run (bronze → silver → gold) | 56.3 s on serverless |
+| Bad records quarantined | **524 / 524** |
+| Duplicate deliveries removed | **1,335 / 1,335** |
+| Pipeline run (bronze → silver → gold) | 119 s on serverless |
 | Matches the locally tested pipeline | **identical**: scorecard and all 15 threshold-sweep rows equal a local run of the same 1,440 minutes |
 
 | Oven / fill threshold | Mean latency | False alarms in 24 h |
 | --- | --- | --- |
-| 3 °C / 1.0 g | 7.3 min | 51 |
-| 4 °C / 1.0 g | 8.0 min | 2 |
-| **5 °C / 1.0 g (default)** | **8.3 min** | **0** |
-| 5 °C / 0.6 g | 7.3 min | 19 |
-| 8 °C / 1.0 g | 9.3 min | 0 |
+| 3 °C / 1.0 g | 8.5 min | 49 |
+| 4 °C / 1.0 g | 9.6 min | 2 |
+| **5 °C / 1.0 g (default)** | **10.4 min** | **0** |
+| 5 °C / 0.6 g | 9.6 min | 19 |
+| 8 °C / 1.0 g | 13.1 min | 0 |
+
+An earlier live run of the original three-fault day also matched its local run exactly
+(3/3 detected, mean 8.3 min, 0 false alarms).
 
 Getting there took two serverless-only fixes the local tests could not see, both now
 covered by regression tests: functions shipped to workers must not reference a module
