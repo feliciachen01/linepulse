@@ -101,14 +101,14 @@
   /* Alerts */
   .events { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
   .events li + li { border-top: 1px solid var(--rule); }
-  .events button { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 112px 1fr; gap: 4px 16px; width: 100%; padding: 14px 20px; cursor: pointer; }
-  .events button:hover, .events button[aria-pressed="true"] { background: var(--accent-soft); }
-  .events button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .events .pick { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 112px 1fr; gap: 4px 16px; width: 100%; padding: 14px 20px; cursor: pointer; }
+  .events li:has(.pick:hover), .events li:has(.pick[aria-pressed="true"]) { background: var(--accent-soft); }
+  .events .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .events .when { font: 600 17px var(--font-num); font-variant-numeric: tabular-nums; }
   .events .what { font-weight: 500; }
   .events .detail { grid-column: 2; color: var(--ink-2); font-size: 14px; }
   .empty { padding: 16px 20px; color: var(--ink-2); }
-  @media (max-width: 600px) { .events button { grid-template-columns: 1fr; } .events .detail { grid-column: 1; } }
+  @media (max-width: 600px) { .events .pick { grid-template-columns: 1fr; padding: 14px 16px; } .events .detail { grid-column: 1; } }
 
   /* Chart */
   .chart-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 20px 12px; margin-top: 12px; }
@@ -136,6 +136,119 @@
 
   footer { margin: 40px 0 48px; color: var(--ink-3); font-size: 14px; }
   .err { color: var(--bad); margin-top: 16px; white-space: pre-wrap; }
+
+  /* ---------- Investigation agent ---------- */
+  :root {
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  .btn { font: inherit; font-size: 14px; font-weight: 500; border-radius: 6px; padding: 6px 14px; cursor: pointer;
+         border: 1px solid var(--rule); background: var(--surface); color: var(--ink);
+         transition: transform 160ms var(--ease-out), background-color 150ms ease, border-color 150ms ease; }
+  .btn:active { transform: scale(0.97); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+  @media (hover: hover) and (pointer: fine) {
+    .btn:hover { border-color: var(--ink-3); }
+    .btn.primary:hover { filter: brightness(1.08); }
+  }
+  .events li { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+  .events .side { display: flex; align-items: center; gap: 10px; padding: 0 20px 0 8px; }
+  .cause { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  .cause b { color: var(--ink); font-weight: 500; }
+  @media (max-width: 600px) {
+    .events li { grid-template-columns: 1fr; }
+    .events .side { padding: 0 16px 14px; justify-content: space-between; }
+  }
+
+  dialog.inv { margin: 0 0 0 auto; height: 100dvh; max-height: 100dvh; width: min(560px, 100vw); max-width: 100vw;
+               border: 0; border-left: 1px solid var(--rule); padding: 0; background: var(--bg); color: var(--ink);
+               transform: translateX(100%); transition: transform 200ms var(--ease-out); overscroll-behavior: contain; }
+  dialog.inv[data-open] { transform: translateX(0); transition: transform 320ms var(--ease-drawer); }
+  dialog.inv::backdrop { background: rgba(18, 23, 25, .32); opacity: 0; transition: opacity 200ms var(--ease-out); }
+  dialog.inv[data-open]::backdrop { opacity: 1; }
+  @media (max-width: 600px) {
+    dialog.inv { margin: auto 0 0; width: 100vw; height: 92dvh; border-left: 0; border-top: 1px solid var(--rule);
+                 border-radius: 12px 12px 0 0; transform: translateY(100%); }
+    dialog.inv[data-open] { transform: translateY(0); }
+  }
+  .inv-head { position: sticky; top: 0; z-index: 1; background: var(--surface); border-bottom: 1px solid var(--rule);
+              padding: 16px 20px 14px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
+  .inv-kicker { font-size: 13px; color: var(--ink-3); }
+  .inv-title { font-size: 18px; font-weight: 600; line-height: 1.3; margin: 0; }
+  .inv-head .x { grid-row: 1 / span 2; grid-column: 2; align-self: start; font-size: 20px; line-height: 1; padding: 6px 10px; }
+  .inv-body { padding: 16px 20px 32px; }
+  .replay-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--ink-2); font-size: 14px; margin-bottom: 8px; }
+  .linkish { font: inherit; font-size: 14px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
+
+  .steps { list-style: none; margin: 0; padding: 0; position: relative; }
+  .step { position: relative; padding: 0 0 18px 28px; }
+  .step::before { content: ""; position: absolute; left: 7px; top: 18px; bottom: 0; width: 1px; background: var(--rule); }
+  .step:last-child::before { display: none; }
+  .step .dot { position: absolute; left: 0; top: 4px; width: 15px; height: 15px; border-radius: 50%;
+               border: 2px solid var(--accent); background: var(--surface); }
+  .step.done .dot { background: var(--accent); }
+  .step.running .dot { animation: pulse 900ms ease-in-out infinite alternate; }
+  @keyframes pulse { from { opacity: 1; } to { opacity: .35; } }
+  .step .thought { margin: 0; }
+  .step .call { display: inline-block; margin-top: 4px; font: 12.5px/1.4 var(--mono); color: var(--ink-2);
+                background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 6px; }
+  .step .found { margin-top: 8px; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; font-size: 14px; }
+  .step.running .found { display: none; }
+  .step .wait { display: none; color: var(--ink-3); font-size: 14px; margin-top: 6px; }
+  .step.running .wait { display: block; }
+  .found table { font-size: 13.5px; }
+  .found th, .found td { padding: 3px 8px 3px 0; border: 0; }
+  .found th { font-size: 12.5px; color: var(--ink-3); }
+  .found tr.moved td { color: var(--ink); font-weight: 600; }
+  .found td { color: var(--ink-2); }
+  .found .spark { display: block; width: 100%; height: 56px; margin-top: 6px; }
+  .found details { margin-top: 6px; }
+  .found summary { cursor: pointer; color: var(--ink-3); font-size: 13px; }
+  .found pre { font: 12px/1.45 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; margin: 6px 0 0; }
+  .delta-up { color: var(--bad); } .delta-down { color: var(--series); }
+
+  .reveal { animation: reveal 240ms var(--ease-out) both; }
+  @keyframes reveal { from { opacity: 0; transform: translateY(6px); } }
+
+  .diag { margin-top: 6px; background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent);
+          border-radius: 6px; padding: 16px 18px; }
+  .diag.enter { animation: diag-in 260ms var(--ease-out) both; }
+  @keyframes diag-in { from { opacity: 0; transform: scale(0.98); } }
+  .diag-k { font-size: 13px; color: var(--ink-3); }
+  .diag-cause { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 2px 0 6px; }
+  .diag-cause strong { font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+  .conf { font-size: 13px; border: 1px solid currentColor; border-radius: 99px; padding: 0 8px; color: var(--ok); }
+  .conf.medium { color: var(--warn); } .conf.low { color: var(--bad); }
+  .diag p { margin: 0 0 10px; }
+  .diag h3 { font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
+  .diag ul, .diag ol { margin: 0; padding-left: 20px; }
+  .diag li { margin: 3px 0; }
+  .diag .meta { font-size: 13px; color: var(--ink-3); margin-top: 12px; }
+  .review { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .review .q { width: 100%; font-size: 14px; color: var(--ink-2); }
+  .review select, .review input { font: inherit; font-size: 14px; }
+  .review input { flex: 1 1 180px; min-width: 0; border: 1px solid var(--rule); border-radius: 6px; padding: 5px 8px; background: var(--surface); color: var(--ink); }
+  .verdict { margin-top: 12px; font-size: 14px; padding: 10px 12px; border-radius: 6px; background: var(--accent-soft); }
+  .verdict.wrong { background: var(--bad-soft); }
+
+  .acc { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 20px; }
+  .acc p { margin: 0 0 12px; color: var(--ink-2); max-width: 72ch; }
+  .bar { display: grid; grid-template-columns: minmax(0, 220px) 1fr 92px; gap: 12px; align-items: center; margin: 8px 0; font-size: 14px; }
+  .bar .track, .bar .fill { display: block; }
+  .bar .track { height: 10px; background: var(--grid); border-radius: 5px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--ink-3); border-radius: 5px; }
+  .bar.agent .fill { background: var(--accent); }
+  .bar .v { font: 600 15px var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+  @media (max-width: 600px) { .bar { grid-template-columns: 1fr 64px; } .bar .track { grid-column: 1 / -1; grid-row: 2; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    dialog.inv, dialog.inv[data-open] { transform: none; transition: opacity 200ms ease; opacity: 0; }
+    dialog.inv[data-open] { opacity: 1; }
+    .reveal, .diag.enter { animation: fade 200ms ease both; }
+    .step.running .dot { animation: none; opacity: .5; }
+    @keyframes fade { from { opacity: 0; } }
+  }
 </style>
 </head>
 <body>
@@ -206,6 +319,11 @@
     </div>
   </section>
 
+  <section id="acc-section" hidden>
+    <h2>How often the investigation names the right cause</h2>
+    <div class="acc" id="acc"></div>
+  </section>
+
   <section>
     <h2>Shift results</h2>
     <div class="table-box" id="shift-box"><table id="shifts"></table></div>
@@ -214,6 +332,19 @@
 
   <footer id="dq"></footer>
 </main>
+
+<dialog class="inv" id="inv" aria-labelledby="inv-title">
+  <div class="inv-head">
+    <span class="inv-kicker" id="inv-kicker">Investigation</span>
+    <h2 class="inv-title" id="inv-title"></h2>
+    <button class="btn x" id="inv-close" aria-label="Close investigation">×</button>
+  </div>
+  <div class="inv-body">
+    <div class="replay-bar"><span id="replay-status"></span><button class="linkish" id="replay-skip">Show all steps</button></div>
+    <ol class="steps" id="steps"></ol>
+    <div id="diag-host"></div>
+  </div>
+</dialog>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -232,8 +363,11 @@ function staticPath(path) {
   const [p, q] = path.split("?");
   const sig = p.match(/^\/api\/signals\/([^/]+)\/([^/]+)$/);
   if (sig) return {url: `data/signals/${sig[1]}/${sig[2]}.json`, last: Number(new URLSearchParams(q).get("minutes") || 180)};
+  const inv = p.match(/^\/api\/investigations\/([^/]+)$/);
+  if (inv && inv[1] !== "evaluation") return {url: `data/investigations/${inv[1]}.json`};
   const files = {"/health": "health", "/api/lines": "lines", "/api/alerts": "alerts", "/api/shifts": "shifts",
-                 "/api/data-quality": "data-quality", "/api/handover": "handover"};
+                 "/api/data-quality": "data-quality", "/api/handover": "handover",
+                 "/api/investigations": "investigations", "/api/investigations/evaluation": "investigation-eval"};
   return {url: `data/${files[p]}.json`};
 }
 
@@ -265,6 +399,7 @@ function renderHero(lines, alerts) {
 
 // ---------- handover
 let notes = [];
+let lastAlerts = null;
 function noteHtml(note, unverified) {
   const bad = new Set(unverified || []);
   const token = /L\d+-\d{8}-\d{3}|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}:\d{2}\b|(?<![\w.])[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/g;
@@ -326,23 +461,37 @@ function renderLines(lines) {
 }
 
 // ---------- alerts
+const CAUSE = {burner_fault: "Burner fault", thermocouple_drift: "Thermocouple drift", belt_slowdown: "Belt slowdown",
+               filler_drift: "Filler drift", unclear: "Unclear"};
+let investigations = new Map();   // alert_id -> summary row from /api/investigations
+
+function selectAlert(a, btn) {
+  document.querySelectorAll("#alerts .pick").forEach(x => x.setAttribute("aria-pressed", String(x === btn)));
+  $("#sel-line").value = a.line_id; $("#sel-signal").value = a.signal;
+  drawChart().catch(showError);
+}
+
 function renderAlerts(alerts) {
   if (!alerts.length) { $("#alerts").innerHTML = `<li class="empty">No drift alerts in this period.</li>`; return; }
   $("#alerts").innerHTML = alerts.map((a, i) => {
     const [name, unit] = SIGNAL[a.signal] || [a.signal, ""];
     const lag = Math.round((Date.parse(a.detected_at) - Date.parse(a.start_minute)) / 60000);
     const lots = a.affected_lots.map(x => x.split("-").pop()).join(", ");
-    return `<li><button data-i="${i}" aria-pressed="false">
+    const inv = investigations.get(a.alert_id);
+    const review = inv && reviewFor(a.alert_id, inv.review);
+    const cause = inv ? (review ? review.root_cause : inv.root_cause) : null;
+    return `<li><button class="pick" data-i="${i}" aria-pressed="false">
       <span class="when">${hm(a.start_minute)}–${hm(a.end_minute)}</span>
       <span class="what">${esc(a.line_id)} ${esc(name.toLowerCase())} ran ${esc(a.direction)}, up to ${fmt(a.peak_abs_dev, 1)} ${unit} off setpoint${a.status === "open" ? " (still open)" : ""}</span>
       <span class="detail">Flagged ${lag} min after it started · lots ${esc(lots)} made during it · ${int(a.units_in_window)} packs, ${int(a.rejects_in_window)} rejected</span>
-    </button></li>`;
+    </button>${inv ? `<span class="side"><span class="cause">${review ? (review.decision === "accept" ? "Accepted" : "Overridden") : "Probable cause"}: <b>${esc(CAUSE[cause] || cause)}</b></span>
+      <button class="btn" data-inv="${esc(a.alert_id)}" data-i="${i}">Investigate</button></span>` : ""}</li>`;
   }).join("");
-  document.querySelectorAll("#alerts button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#alerts .pick").forEach(b => b.onclick = () => selectAlert(alerts[Number(b.dataset.i)], b));
+  document.querySelectorAll("#alerts [data-inv]").forEach(b => b.onclick = () => {
     const a = alerts[Number(b.dataset.i)];
-    document.querySelectorAll("#alerts button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-    $("#sel-line").value = a.line_id; $("#sel-signal").value = a.signal;
-    drawChart().catch(showError);
+    selectAlert(a, b.closest("li").querySelector(".pick"));
+    openInvestigation(a.alert_id, b).catch(showError);
   });
 }
 
@@ -425,13 +574,238 @@ async function drawChart() {
   s.querySelector("#hit").onmouseleave = () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); };
 }
 
+// ---------- investigation agent: replay a recorded run, then accept or override
+const TOOL_LABEL = {get_alert: "Read the alert", get_signal_window: "Look at the signal around it",
+  compare_line_signals: "Compare every signal on the line", get_product_quality: "Check what came off the line",
+  get_related_alerts: "Look for related alerts"};
+const seen = new Set();   // replays already watched this visit open fully, without the animation
+let replayTimer = null, lastOpener = null, current = null;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+function argText(t, a) {
+  if (t === "get_alert" || t === "get_related_alerts") return a.alert_id || "";
+  const w = a.start && a.end ? ` ${hm(a.start)}–${hm(a.end)}` : "";
+  return [a.line_id, a.signal].filter(Boolean).join(" ") + w;
+}
+const signed = (v, d) => {
+  if (v == null) return "–";
+  const r = Number(Number(v).toFixed(d)) || 0;   // no "-0.0"
+  return (r > 0 ? "+" : "") + fmt(r, d);
+};
+const dp = u => u === "°C" || u === "%" ? 1 : 2;
+
+function sparkline(samples, unit) {
+  if (!samples?.length) return "";
+  const W = 480, H = 56, v = samples.map(s => s.deviation ?? 0), lo = Math.min(0, ...v), hi = Math.max(0, ...v), span = hi - lo || 1;
+  const X = i => 4 + i / Math.max(1, v.length - 1) * (W - 8), Y = y => 4 + (1 - (y - lo) / span) * (H - 16);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Deviation from setpoint every 5 minutes">
+    <line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--ink-3)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
+    <path d="${v.map((y, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(y).toFixed(1)}`).join("")}" fill="none" stroke="var(--series)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    <text x="4" y="${H - 2}" font-size="11" fill="var(--ink-3)">${esc(samples[0].time)}</text>
+    <text x="${W - 4}" y="${H - 2}" font-size="11" text-anchor="end" fill="var(--ink-3)">${esc(samples.at(-1).time)}</text></svg>`;
+}
+
+function foundHtml(step) {
+  const r = step.result || {};
+  if (r.error) return `<span style="color:var(--bad)">${esc(r.error)}</span>`;
+  let body = "";
+  if (step.tool === "get_alert") {
+    body = `${esc(r.line_id)} ${esc((r.signal_name || "").toLowerCase())} ran ${esc(r.direction)} from ${esc(r.started)} to ${esc(r.ended)},
+      up to ${fmt(r.peak_smoothed_deviation, dp(r.unit))} ${esc(r.unit)} off setpoint (smoothed). ${int(r.packs_in_window)} packs and lots
+      ${esc((r.lot_numbers || []).join(", "))} were made during it.`;
+  } else if (step.tool === "get_signal_window") {
+    body = `${r.onset === "sudden" ? "Sudden" : "Gradual"} change: ${signed(r.mean_deviation_before, dp(r.unit))} ${esc(r.unit)} in the baseline hour,
+      ${signed(r.mean_deviation_during, dp(r.unit))} during the alert, peak ${signed(r.peak_deviation, dp(r.unit))} at ${esc(r.peak_at)}.
+      Reading noise <b>${fmt(r.noise_ratio, 1)}×</b> the baseline.${sparkline(r.samples, r.unit)}`;
+  } else if (step.tool === "compare_line_signals") {
+    body = `<table><tr><th>Signal</th><th class="num">Before</th><th class="num">During</th><th class="num">Change</th></tr>` +
+      (r.signals || []).map(x => {
+        const moved = Math.abs(x.change || 0) >= 0.5 * (x.alarm_threshold || Infinity);
+        return `<tr class="${moved ? "moved" : ""}"><td>${esc(x.signal_name)}</td><td class="num">${signed(x.mean_deviation_before, dp(x.unit))}</td>
+          <td class="num">${signed(x.mean_deviation_during, dp(x.unit))}</td><td class="num">${signed(x.change, dp(x.unit))} ${esc(x.unit)}</td></tr>`;
+      }).join("") + `</table><div style="color:var(--ink-3);font-size:13px">Deviation from setpoint; baseline ${esc(r.baseline)}. Bold: moved by half its alarm limit or more.</div>`;
+  } else if (step.tool === "get_product_quality") {
+    const b = r.before || {}, d = r.during || {};
+    const row = (k, label, dd) => `<tr><td>${label}</td><td class="num">${fmt(b[k], dd)}</td><td class="num">${fmt(d[k], dd)}</td></tr>`;
+    body = `<table><tr><th></th><th class="num">Baseline</th><th class="num">During</th></tr>
+      ${row("packs_per_min", "Packs per minute", 1)}${row("bake_defects_per_1000", "Bake defects per 1,000", 1)}
+      ${row("underweight_per_1000", "Underweight per 1,000", 1)}${row("mean_pack_weight_g", "Mean pack weight (g)", 2)}</table>`;
+  } else if (step.tool === "get_related_alerts") {
+    const list = (title, xs) => xs?.length ? `<div>${title}: ${xs.map(x => `${esc(x.line_id)} ${esc(x.signal_name.toLowerCase())} ${esc(x.direction)} from ${esc(x.started)}`).join("; ")}</div>` : "";
+    body = list("Same line", r.same_line_nearby) + list("Other line, same time", r.other_lines_same_time) +
+      list("Earlier on this signal", r.earlier_same_signal) || "No related alerts.";
+  }
+  return body + `<details><summary>Raw tool result</summary><pre>${esc(JSON.stringify(r, null, 1))}</pre></details>`;
+}
+
+function stepHtml(step, i) {
+  return `<li class="step" data-step="${i}"><span class="dot" aria-hidden="true"></span>
+    <p class="thought">${esc(step.thought || TOOL_LABEL[step.tool] || step.tool)}</p>
+    <code class="call">${esc(step.tool)}(${esc(argText(step.tool, step.args || {}))})</code>
+    <div class="wait">Checking…</div><div class="found">${foundHtml(step)}</div></li>`;
+}
+
+// Figures in the diagnosis get the same dotted underline as the handover note when they checked out.
+const figMark = (text, bad) => noteHtml(text, bad).replace(/^<p>|<\/p>$/g, "");
+
+function reviewKey(id) { return `linepulse.review.${id}`; }
+function reviewFor(id, serverReview) {
+  if (!STATIC) return serverReview || null;
+  try { return JSON.parse(localStorage.getItem(reviewKey(id)) || "null"); } catch { return null; }
+}
+async function saveReview(id, body, diagnosed) {
+  if (STATIC) {
+    const r = {...body, root_cause: body.decision === "accept" ? diagnosed : body.root_cause, at: new Date().toISOString()};
+    try { localStorage.setItem(reviewKey(id), JSON.stringify(r)); } catch { /* private mode: keep it for this view only */ }
+    return r;
+  }
+  const res = await fetch(`/api/investigations/${encodeURIComponent(id)}/review`,
+    {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  if (!res.ok) throw new Error(`Review not saved: ${(await res.json().catch(() => ({}))).error || res.status}`);
+  return res.json();
+}
+
+function diagHtml(rec, review) {
+  const d = rec.diagnosis, bad = rec.unverified || [];
+  const by = rec.writer === "llm" ? `Investigated by ${esc(rec.model)}` : "Investigated by the deterministic investigator (no LLM key configured)";
+  const checked = rec.figures_verified === rec.figures_total ? `all ${rec.figures_total} figures checked against the tool results`
+    : `${rec.figures_total - rec.figures_verified} of ${rec.figures_total} figures not found in the tool results`;
+  let rv;
+  if (!review) {
+    rv = `<div class="review" id="review"><span class="q">Do you agree? Your answer is kept with the investigation${STATIC ? " (in this browser)" : ""}.</span>
+      <button class="btn primary" id="rv-accept">Accept</button><button class="btn" id="rv-override">Override…</button></div>`;
+  } else {
+    const gt = rec.ground_truth;
+    const right = gt && gt.cause === review.root_cause, agent = gt && gt.cause === d.root_cause;
+    rv = `<div class="review"><span class="q">${review.decision === "accept" ? "You accepted this diagnosis." :
+        `You overrode it: <b>${esc(CAUSE[review.root_cause] || review.root_cause)}</b>${review.note ? ` (“${esc(review.note)}”)` : ""}.`}</span>
+        <button class="linkish" id="rv-undo">Change answer</button></div>` +
+      (gt ? `<div class="verdict ${right ? "" : "wrong"}">Simulator ground truth: <b>${esc(CAUSE[gt.cause] || gt.cause)}</b> (fault ${esc(gt.fault_id)}).
+        The agent was ${agent ? "right" : "wrong"}${review.decision === "override" ? `, and your override was ${right ? "right" : "wrong"}` : ""}.</div>` : "");
+  }
+  return `<div class="diag-k">Diagnosis</div>
+    <div class="diag-cause"><strong>${esc(CAUSE[d.root_cause] || d.root_cause)}</strong><span class="conf ${esc(d.confidence)}">${esc(d.confidence)} confidence</span></div>
+    <p>${figMark(d.summary, bad)}</p>
+    <h3>Evidence</h3><ul>${(d.evidence || []).map(e => `<li>${figMark(e, bad)}</li>`).join("")}</ul>
+    ${d.ruled_out?.length ? `<h3>Ruled out</h3><ul>${d.ruled_out.map(r => `<li><b>${esc(CAUSE[r.cause] || r.cause)}</b>: ${figMark(r.why, bad)}</li>`).join("")}</ul>` : ""}
+    <h3>Recommended actions</h3><ol>${(d.actions || []).map(a => `<li>${figMark(a, bad)}</li>`).join("")}</ol>
+    <div class="meta">${by} through ${rec.steps.length} tool calls; ${checked}${rec.retried ? ", corrected once after the check" : ""}.</div>${rv}`;
+}
+
+function renderDiag(rec, animate) {
+  const host = $("#diag-host");
+  host.innerHTML = `<div class="diag${animate ? " enter" : ""}">${diagHtml(rec, reviewFor(rec.alert_id, rec.review))}</div>`;
+  const id = rec.alert_id, diagnosed = rec.diagnosis.root_cause;
+  const done = async body => {
+    const r = await saveReview(id, body, diagnosed);
+    rec.review = r;
+    const row = investigations.get(id); if (row) row.review = r;
+    renderDiag(rec, false);
+    if (lastAlerts) renderAlerts(lastAlerts);
+  };
+  $("#rv-accept")?.addEventListener("click", () => done({decision: "accept"}).catch(showError));
+  $("#rv-override")?.addEventListener("click", () => {
+    $("#review").innerHTML = `<span class="q">What was the cause?</span>
+      <select id="rv-cause" aria-label="Root cause">${Object.entries(CAUSE).filter(([k]) => k !== diagnosed)
+        .map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
+      <input id="rv-note" maxlength="500" placeholder="What you found (optional)" aria-label="Note">
+      <button class="btn primary" id="rv-save">Save</button>`;
+    $("#rv-cause").focus();
+    $("#rv-save").onclick = () => done({decision: "override", root_cause: $("#rv-cause").value, note: $("#rv-note").value || null}).catch(showError);
+  });
+  $("#rv-undo")?.addEventListener("click", () => {
+    if (STATIC) { try { localStorage.removeItem(reviewKey(id)); } catch {} }
+    rec.review = null; renderDiag(rec, false);
+    if (!STATIC) $("#rv-accept")?.focus();
+  });
+}
+
+function finishReplay(rec, animate) {
+  clearTimeout(replayTimer);
+  document.querySelectorAll("#steps .step").forEach(li => { li.classList.remove("running"); li.classList.add("done"); li.hidden = false; });
+  $("#replay-skip").hidden = true;
+  $("#replay-status").textContent = `${rec.steps.length} checks, then a diagnosis.` + (rec.writer === "llm" ? "" : " Recorded run, replayed.");
+  renderDiag(rec, animate);
+  seen.add(rec.alert_id);
+}
+
+function replay(rec) {
+  const items = [...document.querySelectorAll("#steps .step")];
+  items.forEach(li => li.hidden = true);
+  $("#replay-skip").hidden = false;
+  let i = 0;
+  const next = () => {
+    if (i > 0) { items[i - 1].classList.remove("running"); items[i - 1].classList.add("done"); }
+    if (i === items.length) { finishReplay(rec, true); return; }
+    const li = items[i];
+    li.hidden = false; li.classList.add("reveal", "running");
+    $("#replay-status").textContent = `Step ${i + 1} of ${items.length}: ${TOOL_LABEL[rec.steps[i].tool] || rec.steps[i].tool}…`;
+    li.scrollIntoView({block: "nearest", behavior: reduceMotion.matches ? "auto" : "smooth"});
+    i += 1;
+    replayTimer = setTimeout(next, 850);
+  };
+  next();
+}
+
+async function openInvestigation(id, opener) {
+  lastOpener = opener;
+  const rec = await get(`/api/investigations/${encodeURIComponent(id)}`);
+  current = rec;
+  const [name] = SIGNAL[rec.signal] || [rec.signal];
+  $("#inv-kicker").textContent = `Investigation · alert at ${hm(rec.start_minute)} UTC`;
+  $("#inv-title").textContent = `Why did ${rec.line_id} ${name.toLowerCase()} alarm?`;
+  $("#steps").innerHTML = rec.steps.map(stepHtml).join("");
+  $("#diag-host").innerHTML = "";
+  const dlg = $("#inv");
+  if (!dlg.open) { dlg.showModal(); requestAnimationFrame(() => dlg.setAttribute("data-open", "")); }
+  dlg.querySelector(".inv-body").scrollTop = 0; dlg.scrollTop = 0;
+  if (seen.has(id)) finishReplay(rec, false); else replay(rec);
+}
+
+function closeInvestigation() {
+  const dlg = $("#inv");
+  clearTimeout(replayTimer);
+  dlg.removeAttribute("data-open");
+  const done = () => { dlg.close(); lastOpener?.focus(); };
+  if (reduceMotion.matches) { done(); return; }
+  dlg.addEventListener("transitionend", done, {once: true});
+  setTimeout(() => dlg.open && done(), 260);   // in case transitionend never fires
+}
+$("#inv-close").onclick = closeInvestigation;
+$("#inv").addEventListener("cancel", e => { e.preventDefault(); closeInvestigation(); });
+$("#inv").addEventListener("click", e => { if (e.target === $("#inv")) closeInvestigation(); });   // backdrop
+$("#replay-skip").onclick = () => current && finishReplay(current, false);
+
+function renderAccuracy(ev) {
+  if (!ev?.methods) { $("#acc-section").hidden = true; return; }
+  const m = ev.methods, rows = [
+    ["lookup", "Alarm lookup table: one cause per signal", false],
+    ["rules", "Deterministic investigator", !m.llm],
+    ["llm", `LLM investigation agent (${ev.llm_model || "LLM"})`, true],
+  ].filter(([k]) => m[k]?.n);
+  $("#acc-section").hidden = false;
+  const tc = m.lookup.by_cause.thermocouple_drift;
+  $("#acc").innerHTML = `<p>Scored on ${int(ev.days)} random simulated days with ${int(ev.incidents)} injected incidents, each with a known root cause.
+    Reading the alarm alone works when the alarm's signal is the cause; it got all ${int(tc.n)} drifting thermocouples wrong, the case where
+    adjusting the burner would make things worse.</p>` +
+    rows.map(([k, label, agent]) => `<div class="bar${agent ? " agent" : ""}"><span>${esc(label)}</span>
+      <span class="track"><span class="fill" style="width:${(100 * m[k].rate).toFixed(1)}%"></span></span>
+      <span class="v">${int(m[k].correct)} / ${int(m[k].n)}</span></div>`).join("") +
+    (m.llm ? "" : `<p class="note-s">The LLM agent's score appears here once it has been evaluated with an API key (see the README).</p>`);
+}
+
 function showError(e) { $("#error").hidden = false; $("#error").textContent = e.message; }
 
 async function load() {
   try {
-    const [health, lines, alerts, shifts, dq, handover] = await Promise.all(
-      ["/health", "/api/lines", "/api/alerts?limit=50", "/api/shifts", "/api/data-quality", "/api/handover"].map(get));
+    const optional = path => get(path).catch(() => null);   // investigations may not have been generated yet
+    const [health, lines, alerts, shifts, dq, handover, invs, evaluation] = await Promise.all([
+      ...["/health", "/api/lines", "/api/alerts?limit=50", "/api/shifts", "/api/data-quality", "/api/handover"].map(get),
+      optional("/api/investigations"), optional("/api/investigations/evaluation")]);
     $("#error").hidden = true;
+    investigations = new Map((invs || []).map(r => [r.alert_id, r]));
+    lastAlerts = alerts;
+    renderAccuracy(evaluation);
     $("#mode").textContent = {databricks: "Live from Databricks SQL", snapshot: "Snapshot"}[health.mode] || "Local data";
     const keepLine = $("#sel-line").value;
     renderHero(lines, alerts); renderLines(lines); renderAlerts(alerts); renderShifts(shifts); renderDq(dq);
@@ -449,7 +823,7 @@ if (STATIC) {
   $("#snapshot").hidden = false;
   $("#snapshot").innerHTML = `This is a snapshot of a ${STATIC.hours}-hour simulated run${STATIC.matches_live ? ", identical to the run on Databricks" : ""}. ` +
     `${sc.detected} of ${sc.faults} injected faults were caught, on average ${sc.mean_latency_min} minutes after they started, with ${sc.false_alarms} false alarms. ` +
-    `<a href="${STATIC.repo}">How it works</a>`;
+    `Press <b>Investigate</b> on an alert to replay how the agent worked out its cause. <a href="${STATIC.repo}">How it works</a>`;
   $("#sel-window").value = "1440";
   load();
 } else {

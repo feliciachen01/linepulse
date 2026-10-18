@@ -68,6 +68,18 @@ def build(export: Path, out: Path, repo_url: str) -> dict:
     handover = export / "gold_handover.json"
     notes = json.loads(handover.read_text()) if handover.exists() else []
     write("handover.json", sorted(notes, key=lambda n: (n["shift_date"], n["shift"]), reverse=True))
+    # Investigations: a summary list (as GET /api/investigations) and one file per alert (the replay).
+    inv_path = export / "gold_investigations.json"
+    invs = json.loads(inv_path.read_text()) if inv_path.exists() else []
+    write("investigations.json", [{
+        "alert_id": r["alert_id"], "line_id": r["line_id"], "signal": r["signal"], "start_minute": r["start_minute"],
+        "writer": r["writer"], "model": r["model"], "root_cause": r["diagnosis"]["root_cause"],
+        "confidence": r["diagnosis"]["confidence"], "status": r["status"], "review": None} for r in invs])
+    for r in invs:
+        write(f"investigations/{r['alert_id']}.json", r | {"review": None})
+    eval_path = export / "gold_investigation_eval.json"
+    if eval_path.exists():
+        write("investigation-eval.json", json.loads(eval_path.read_text()))
     for (line, signal), rows in signals.items():
         write(f"signals/{line}/{signal}.json", sorted(rows, key=lambda r: r["minute"]))
 

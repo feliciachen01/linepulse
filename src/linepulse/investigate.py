@@ -56,7 +56,9 @@ def _iso(t) -> str:
 
 
 def _r(x, nd):
-    return None if x is None or pd.isna(x) else round(float(x), nd)
+    if x is None or pd.isna(x):
+        return None
+    return int(round(float(x))) if nd == 0 else round(float(x), nd)
 
 
 # ---------------------------------------------------------------- tools over gold data
