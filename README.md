@@ -65,11 +65,14 @@ injected in the first shift only, so the other 16 hours are a clean false-alarm 
 
 | Metric | Live result |
 | --- | --- |
+| Events ingested | 260,543 |
 | Faults detected | **3 / 3** |
-| Detection latency | mean **8.3 min** |
+| Detection latency | mean **8.3 min**, max 12 (F1 12, F2 10, F3 3) |
 | False alarms over 24 h (defaults 5 °C / 1.0 g) | **0** |
+| Bad records quarantined | **526 / 526** |
+| Duplicate deliveries removed | **1,343 / 1,343** |
 | Last incremental pipeline run (bronze → silver → gold) | 56.3 s on serverless |
-| Matches the locally tested pipeline | **identical**: all 15 threshold-sweep rows equal a local run of the same 1,440 minutes |
+| Matches the locally tested pipeline | **identical**: scorecard and all 15 threshold-sweep rows equal a local run of the same 1,440 minutes |
 
 | Oven / fill threshold | Mean latency | False alarms in 24 h |
 | --- | --- | --- |
