@@ -23,11 +23,13 @@ jobs:
         env: { LINEPULSE_ENGINE: delta }
         run: pytest -q
 
-      - name: Simulate one shift and build gold tables
-        run: python scripts/run_local.py --minutes 480 --chunks 4 --engine delta
+      - name: Simulate 24 h and build gold tables
+        run: python scripts/run_local.py --minutes 1440 --chunks 6 --engine delta
 
-      - name: Write shift-handover notes (template, no API key in CI)
-        run: python scripts/generate_handover.py --no-llm
+      - name: Investigate alerts and write handover notes (no API key in CI)
+        run: |
+          python scripts/investigate_alerts.py --no-llm
+          python scripts/generate_handover.py --no-llm
 
       - name: Build API
         run: dotnet build api/LinePulse.Api -c Release

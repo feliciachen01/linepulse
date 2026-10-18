@@ -10,7 +10,8 @@ investigates. A belt slowdown can raise four alerts (belt plus three hot zones),
 every alert would overweight it; all-alert accuracy is reported too.
 
     python scripts/evaluate_investigations.py --days 30                    # lookup + rules, ~5 min
-    GEMINI_API_KEY=... python scripts/evaluate_investigations.py --days 30 --llm-max 40
+    GEMINI_API_KEY=... python scripts/evaluate_investigations.py --days 30 --llm-max 30 \
+        --save docs/investigation_eval.json      # then commit it: the dashboard shows this file
 
 Three methods are scored on the same alerts:
     lookup  one cause per alarm signal (oven -> burner, belt -> belt, fill -> filler): what an
@@ -19,7 +20,9 @@ Three methods are scored on the same alerts:
             so treat it as a sanity check of the evidence, not as a fair opponent)
     llm     the tool-calling agent, told only general plant troubleshooting knowledge
 
-Writes <out>/summary.json and summary.md, and <export>/gold_investigation_eval.json for the dashboard.
+Writes <out>/summary.json and summary.md, <export>/gold_investigation_eval.json for the dashboard and,
+with --save, a copy to commit. LLM runs cost free-tier quota, so the published scorecard is the
+committed docs/investigation_eval.json rather than a fresh LLM run on every deploy.
 """
 
 from __future__ import annotations
@@ -89,6 +92,7 @@ def main(argv=None):
     p.add_argument("--llm-max", type=int, default=0, help="Alerts the LLM agent investigates (free tiers are rate limited)")
     p.add_argument("--out", default=str(ROOT / "local_data" / "investigation_eval"))
     p.add_argument("--export", default=str(ROOT / "local_data" / "export"), help="Also write the dashboard copy here")
+    p.add_argument("--save", help="Also write the summary here, e.g. docs/investigation_eval.json")
     a = p.parse_args(argv)
 
     client = client_from_env() if a.llm_max else None
@@ -146,6 +150,8 @@ def main(argv=None):
     (out / "summary.md").write_text(md)
     if a.export and Path(a.export).exists():
         (Path(a.export) / "gold_investigation_eval.json").write_text(json.dumps(summary, indent=2))
+    if a.save:
+        Path(a.save).write_text(json.dumps(summary, indent=2) + "\n")
     print("\n" + md)
 
 

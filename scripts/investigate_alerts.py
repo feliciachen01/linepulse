@@ -8,13 +8,15 @@ fails) the deterministic investigator does, with the same tools. Each record kee
 (why, which tool, what came back), the diagnosis, the figure check and, because the data is
 simulated, the injected root cause to compare with.
 
-Writes <export>/gold_investigations.json, which the .NET API and the static demo replay.
+Writes <export>/gold_investigations.json, which the .NET API and the static demo replay, and
+copies the committed diagnosis-accuracy scorecard (docs/investigation_eval.json) next to it.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -39,6 +41,9 @@ def main(argv=None):
     recs = [investigate(tools, alert_id, client, truth)
             for alert_id in tools.alerts.sort_values("start_minute").alert_id]
     (export / "gold_investigations.json").write_text(json.dumps(recs, indent=2, ensure_ascii=False, default=str))
+    scorecard = ROOT / "docs" / "investigation_eval.json"
+    if scorecard.exists():
+        shutil.copy(scorecard, export / "gold_investigation_eval.json")
     scored = [r for r in recs if r["ground_truth"]]
     right = sum(r["diagnosis"]["root_cause"] == r["ground_truth"]["cause"] for r in scored)
     print(f"{len(recs)} investigations, {sum(r['status'] == 'verified' for r in recs)} fully verified, "

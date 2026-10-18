@@ -1,7 +1,8 @@
 name: pages
 # Rebuilds the static dashboard demo from source on every push to main:
-# simulate 24 h -> run the pipeline (Delta) -> export gold -> static site -> GitHub Pages.
-# No secrets involved: the page is generated, not connected to Databricks.
+# simulate 24 h -> run the pipeline (Delta) -> export gold -> investigate alerts -> handover
+# notes -> static site -> GitHub Pages. The only secret is the optional GEMINI_API_KEY; the page
+# is generated, not connected to Databricks.
 on:
   push:
     branches: [main]
@@ -29,6 +30,11 @@ jobs:
 
       - name: Simulate 24 h and build gold tables (same run as the live Databricks run)
         run: python scripts/run_local.py --minutes 1440 --chunks 6 --engine delta
+
+      - name: Investigate every alert (LLM agent if GEMINI_API_KEY is set, else deterministic investigator)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python scripts/investigate_alerts.py
 
       - name: Write shift-handover notes (LLM agent if GEMINI_API_KEY is set, else template)
         env:
