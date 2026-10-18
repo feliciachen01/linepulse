@@ -118,7 +118,7 @@ def main(argv=None):
         truth = json.loads((data / "ground_truth" / "faults.json").read_text())
         minutes = store.read("gold_signal_minute").toPandas()
         print("\nTHRESHOLD SWEEP")
-        print(evaluate.threshold_sweep(minutes, truth).to_string(index=False))
+        print(evaluate.threshold_sweep(minutes, truth, data_until=origin + timedelta(minutes=a.minutes)).to_string(index=False))
     spark.stop()
 
 
