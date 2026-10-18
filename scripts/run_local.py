@@ -60,12 +60,43 @@ def export_gold(store: TableStore, out_dir: Path) -> None:
         (out_dir / f"{t}.json").write_text(pdf.to_json(orient="records", date_format="iso", date_unit="s"))
 
 
+def run_shift(spark, data: Path, origin: datetime, minutes: float, chunks: int = 1,
+              engine: str = "delta", seed: int = 7, verbose: bool = True):
+    """Simulate `minutes` of line data in `chunks` incremental runs and score the result.
+
+    Returns (store, score). `data` must be empty or absent.
+    """
+    store = TableStore.local(spark, str(data), engine=engine)
+    per_chunk = minutes / chunks
+    for i in range(chunks):
+        sim = simulator.write_chunk(data, origin, per_chunk, seed=seed)
+        t0 = time.time()
+        counts = pipeline.run_all(store, str(data / "landing"), use_autoloader=False)
+        if verbose:
+            print(f"run {i + 1}/{chunks}: +{sim['events']} events -> {json.dumps(counts)} ({time.time() - t0:.1f} s)")
+
+    truth = json.loads((data / "ground_truth" / "faults.json").read_text())
+    alerts = store.read("gold_alerts").toPandas()
+    score = evaluate.score_alerts(alerts, truth, data_until=origin + timedelta(minutes=minutes))
+    dq_truth = json.loads((data / "ground_truth" / "dq_truth.json").read_text())
+    quarantined = store.read("silver_quarantine").select("event_id").distinct().count()
+    silver_rows = store.read("silver_telemetry").count() + store.read("silver_units").count()
+    score["data_quality"] = {
+        "injected_bad_records": dq_truth["bad_records"],
+        "quarantined_records": quarantined,
+        "injected_duplicates": dq_truth["duplicates"],
+        "duplicates_removed": store.read("bronze_events").count() - silver_rows - quarantined,
+    }
+    return store, score
+
+
 def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--data", default=str(ROOT / "local_data"))
     p.add_argument("--minutes", type=float, default=480)
     p.add_argument("--chunks", type=int, default=1, help="Split the shift into N incremental pipeline runs")
     p.add_argument("--origin", default="2026-10-19T06:00:00")
+    p.add_argument("--seed", type=int, default=7, help="Simulator seed (noise and process wander)")
     p.add_argument("--keep", action="store_true", help="Do not wipe previous local data")
     p.add_argument("--engine", choices=["delta", "parquet"], default="delta",
                    help="parquet = fallback for machines that cannot download the Delta jar")
@@ -76,36 +107,15 @@ def main(argv=None):
     if data.exists() and not a.keep:
         shutil.rmtree(data)
     spark = local_spark(a.engine)
-    store = TableStore.local(spark, str(data), engine=a.engine)
     origin = datetime.fromisoformat(a.origin)
-
-    per_chunk = a.minutes / a.chunks
-    timings = []
-    for i in range(a.chunks):
-        sim = simulator.write_chunk(data, origin, per_chunk)
-        t0 = time.time()
-        counts = pipeline.run_all(store, str(data / "landing"), use_autoloader=False)
-        timings.append(round(time.time() - t0, 1))
-        print(f"run {i + 1}/{a.chunks}: +{sim['events']} events -> {json.dumps(counts)} ({timings[-1]} s)")
+    store, score = run_shift(spark, data, origin, a.minutes, a.chunks, a.engine, a.seed)
 
     export_gold(store, data / "export")
-    truth = json.loads((data / "ground_truth" / "faults.json").read_text())
-    alerts = store.read("gold_alerts").toPandas()
-    data_until = origin + timedelta(minutes=a.minutes)
-    score = evaluate.score_alerts(alerts, truth, data_until=data_until)
-    dq_truth = json.loads((data / "ground_truth" / "dq_truth.json").read_text())
-    quarantined = store.read("silver_quarantine").select("event_id").distinct().count()
-    silver_rows = store.read("silver_telemetry").count() + store.read("silver_units").count()
-    score["data_quality"] = {
-        "injected_bad_records": dq_truth["bad_records"],
-        "quarantined_records": quarantined,
-        "injected_duplicates": dq_truth["duplicates"],
-        "duplicates_removed": store.read("bronze_events").count() - silver_rows - quarantined,
-    }
     (data / "export" / "scorecard.json").write_text(json.dumps(score, indent=2, default=str))
     print("\nSCORECARD")
     print(json.dumps(score, indent=2, default=str))
     if a.sweep:
+        truth = json.loads((data / "ground_truth" / "faults.json").read_text())
         minutes = store.read("gold_signal_minute").toPandas()
         print("\nTHRESHOLD SWEEP")
         print(evaluate.threshold_sweep(minutes, truth).to_string(index=False))
