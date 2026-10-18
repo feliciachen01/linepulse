@@ -1,8 +1,21 @@
 # LinePulse
 
+[![ci](https://github.com/feliciachen01/linepulse/actions/workflows/ci.yml/badge.svg)](https://github.com/feliciachen01/linepulse/actions/workflows/ci.yml)
+[![pages](https://github.com/feliciachen01/linepulse/actions/workflows/pages.yml/badge.svg)](https://feliciachen01.github.io/linepulse/)
+
 Real-time quality and waste monitoring for a (simulated) bakery line: a Databricks
 lakehouse that turns line telemetry into drift alerts, shift KPIs and recall-ready
 lot lists, served by a .NET 8 API and dashboard. Runs entirely on free tiers.
+
+**[Open the live demo](https://feliciachen01.github.io/linepulse/)**: a static snapshot of the
+dashboard over 24 simulated hours, identical to the run on Databricks. Click an alert to chart
+the excursion behind it.
+
+[![LinePulse dashboard serving live gold tables from Databricks SQL](docs/dashboard-live.png)](https://feliciachen01.github.io/linepulse/)
+
+- **Live on Databricks Free Edition:** 3/3 injected faults caught, mean 8.3 min, 0 false alarms in 24 h
+- **Measured, not claimed:** 30/30 faults across 10 simulated shifts; every bad record quarantined
+- **Stack:** Auto Loader, Delta, Unity Catalog, Spark Structured Streaming, .NET 8 minimal API, GitHub Actions
 
 > **Simulated data.** Two naan lines, three injected faults, deliberate bad records
 > and duplicate deliveries. Because every fault is injected on purpose, detection is
@@ -89,9 +102,7 @@ handle a run where no fault has started yet.
 
 ### Live dashboard (.NET 8 API on the Databricks SQL warehouse)
 
-![LinePulse dashboard serving live gold tables from Databricks SQL](docs/dashboard-live.png)
-
-The API runs in a GitHub Codespace and reads the gold tables through the Databricks SQL
+The screenshot at the top is this setup. The API runs in a GitHub Codespace and reads the gold tables through the Databricks SQL
 Statement Execution API with a personal access token. The dashboard shows both lines, the
 three drift alerts with the lots made during each excursion, and KPIs for all three shifts.
 
@@ -130,9 +141,13 @@ Needs Python 3.11+, Java 17+, .NET 8 SDK - or open the repo in **GitHub Codespac
 ```bash
 pip install -r requirements.txt
 python scripts/run_local.py --minutes 480 --chunks 8 --sweep   # simulate a shift, build gold, print scorecard
-pytest -q                                                       # 14 tests, ~2 min
+pytest -q                                                       # 16 tests, ~2 min
 cd api/LinePulse.Api && dotnet run                              # open http://localhost:5000 (port printed on start)
 ```
+
+To rebuild the static demo: `python scripts/run_local.py --minutes 1440` then
+`python scripts/build_static_demo.py` (writes `site/`). The `pages` workflow does this on every
+push to `main` and publishes it to GitHub Pages.
 
 If Spark cannot download the Delta jar (no access to Maven), add `--engine parquet`;
 everything runs the same, with MERGE emulated by an anti-join.
@@ -197,9 +212,10 @@ Inputs are validated against allow-lists and all SQL is parameterized.
 
 ## Tested here
 
-- 14 pytest tests: chunked simulation equals a single run, DQ rules name every failure,
+- 16 pytest tests: chunked simulation equals a single run, DQ rules name every failure,
   end-to-end detection + idempotent rerun, Spark and pandas detectors agree, shipped
-  functions pickle without importable modules, sweep handles runs with no alerts.
+  functions pickle without importable modules, sweep handles runs with no alerts,
+  static demo files match the API's responses.
 - The pipeline also runs over **Spark Connect** with workers that cannot import the
   package, the same condition as Databricks serverless.
 - API: 12 smoke checks in Local mode, and in Databricks mode against a fake Statement
@@ -220,7 +236,7 @@ Inputs are validated against allow-lists and all SQL is parameterized.
 ```
 src/linepulse/   simulator, pipeline (bronze/silver/gold), store (UC or local), evaluate
 notebooks/       Databricks notebooks: 00 setup, 01 simulate, 02 pipeline, 03 evaluate, 99 reset
-scripts/         run_local.py (whole pipeline on your machine), evaluate_seeds.py, smoke_api.sh
+scripts/         run_local.py (whole pipeline on your machine), evaluate_seeds.py, build_static_demo.py, smoke_api.sh
 tests/           pytest suite + fake Databricks SQL endpoint
 api/             .NET 8 minimal API + dashboard (wwwroot)
 databricks.yml   optional Asset Bundle for the scheduled job

@@ -73,6 +73,10 @@
     header, main { padding-left: 16px; padding-right: 16px; }
     .stats { grid-template-columns: repeat(2, 1fr); }
   }
+  .snapshot { max-width: 1180px; margin: 0 auto 4px; padding: 0 24px; color: var(--ink-2); font-size: 13px; }
+  .snapshot b { color: var(--ink); }
+  .snapshot a { color: var(--series); }
+  @media (max-width: 600px) { .snapshot { padding: 0 16px; } }
   .err { color: var(--critical); font-family: var(--mono); font-size: 13px; white-space: pre-wrap; }
   .note { color: var(--ink-3); font-size: 12px; margin-top: 8px; }
 </style>
@@ -83,6 +87,7 @@
   <span class="badge" id="mode">…</span>
   <span class="meta" id="asof">Loading gold tables…</span>
 </header>
+<div id="snapshot" class="snapshot" hidden></div>
 <main>
   <div id="error" class="err" hidden></div>
   <section class="lines" id="lines"></section>
@@ -101,7 +106,7 @@
         </select>
         <select id="sel-window" aria-label="Time window">
           <option value="120">Last 2 h</option><option value="240">Last 4 h</option>
-          <option value="480" selected>Last 8 h</option>
+          <option value="480" selected>Last 8 h</option><option value="1440">Last 24 h</option>
         </select>
       </div>
     </div>
@@ -142,10 +147,23 @@ const hm = iso => iso ? new Date(iso).toISOString().slice(11, 16) : "–";
 const SIGNAL = {oven_z1_c: ["Oven zone 1", "°C"], oven_z2_c: ["Oven zone 2", "°C"], oven_z3_c: ["Oven zone 3", "°C"], fill_weight_g: ["Fill weight", "g"]};
 const ICON = {OK: "●", WARN: "▲", ALERT: "■"};
 
+// Static snapshot mode (GitHub Pages): scripts/build_static_demo.py sets window.LINEPULSE_STATIC
+// and writes the same JSON the API returns under data/. Each API path maps to one file.
+const STATIC = window.LINEPULSE_STATIC || null;
+function staticPath(path) {
+  const [p, q] = path.split("?");
+  const sig = p.match(/^\/api\/signals\/([^/]+)\/([^/]+)$/);
+  if (sig) return {url: `data/signals/${sig[1]}/${sig[2]}.json`, last: Number(new URLSearchParams(q).get("minutes") || 180)};
+  const files = {"/health": "health", "/api/lines": "lines", "/api/alerts": "alerts", "/api/shifts": "shifts", "/api/data-quality": "data-quality"};
+  return {url: `data/${files[p]}.json`};
+}
+
 async function get(path) {
-  const r = await fetch(path);
+  const target = STATIC ? staticPath(path) : {url: path};
+  const r = await fetch(target.url);
   if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error(`${path}: ${r.status} ${b.title || ""}`); }
-  return r.json();
+  const data = await r.json();
+  return target.last ? data.slice(-target.last) : data;
 }
 
 function renderLines(lines) {
@@ -258,7 +276,7 @@ async function load() {
     const [health, lines, alerts, shifts, dq] = await Promise.all(
       ["/health", "/api/lines", "/api/alerts?limit=50", "/api/shifts", "/api/data-quality"].map(get));
     $("#error").hidden = true;
-    $("#mode").textContent = health.mode === "databricks" ? "Databricks SQL" : "Local export";
+    $("#mode").textContent = {databricks: "Databricks SQL", snapshot: "Static snapshot"}[health.mode] || "Local export";
     const keepLine = $("#sel-line").value;
     renderLines(lines); renderAlerts(alerts); renderShifts(shifts); renderDq(dq);
     if (keepLine) $("#sel-line").value = keepLine;
@@ -270,8 +288,18 @@ async function load() {
 }
 ["#sel-line", "#sel-signal", "#sel-window"].forEach(s => $(s).onchange = () => drawChart().catch(e => { $("#error").hidden = false; $("#error").textContent = e.message; }));
 window.addEventListener("resize", () => drawChart().catch(() => {}));
-load();
-setInterval(load, 30000);
+if (STATIC) {
+  const sc = STATIC.scorecard;
+  $("#snapshot").hidden = false;
+  $("#snapshot").innerHTML = `Static snapshot of a <b>${STATIC.hours}-hour simulated run</b>${STATIC.matches_live ? ", identical to the live Databricks run" : ""}: ` +
+    `<b>${sc.detected}/${sc.faults}</b> injected faults caught, mean <b>${sc.mean_latency_min} min</b>, <b>${sc.false_alarms}</b> false alarms. ` +
+    `Same page the .NET API serves. <a href="${STATIC.repo}">Source on GitHub</a>`;
+  $("#sel-window").value = "1440";
+  load();
+} else {
+  load();
+  setInterval(load, 30000);
+}
 </script>
 </body>
 </html>
