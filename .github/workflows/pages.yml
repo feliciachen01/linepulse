@@ -13,13 +13,16 @@ permissions:
   pages: write
   id-token: write
 
+# Queue deploys instead of cancelling: several merges in a row used to cancel every run before
+# any finished, so the site never updated. The newest queued run always deploys last.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -35,13 +38,15 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
-        run: python scripts/investigate_alerts.py
+        run: python scripts/investigate_alerts.py --llm-budget-s 480
+        timeout-minutes: 15
 
       - name: Write shift-handover notes (LLM agent if GEMINI_API_KEY is set, else template)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
         run: python scripts/generate_handover.py
+        timeout-minutes: 10
 
       - name: Build static site
         run: python scripts/build_static_demo.py --out site
