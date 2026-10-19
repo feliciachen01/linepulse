@@ -6,345 +6,308 @@
 <title>LinePulse</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* ---------- tokens: one place for every colour, size and curve ---------- */
   :root {
-    --bg: #f6f7f5;        /* flour */
-    --surface: #ffffff;
-    --ink: #1e2a2f;       /* oven steel */
-    --ink-2: #536269;
-    --ink-3: #7d8a90;
-    --rule: #e2e6e3;
-    --accent: #0e6e6b;    /* line teal: interactive + the handover */
-    --accent-soft: #e3f1f0;
-    --ok: #2f7d4e;
-    --warn: #9a5b00;
-    --bad: #b42318;
-    --bad-soft: #fbe9e7;
-    --series: #2a78d6;
-    --band: rgba(42,120,214,.08);
-    --grid: #eceeec;
-    --font: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
-    --font-num: "Barlow Semi Condensed", "Barlow", system-ui, sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #121719; --surface: #1a2124; --ink: #e8ecea; --ink-2: #a9b4b9; --ink-3: #7f8b91;
-      --rule: #2a3336; --accent: #55b8b2; --accent-soft: #173533; --ok: #5cc28a; --warn: #f0b04a;
-      --bad: #f07a6c; --bad-soft: #3a1f1c; --series: #3987e5; --band: rgba(57,135,229,.14); --grid: #222b2e;
-    }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font); }
-  a { color: var(--accent); }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
-  @media (max-width: 600px) { .wrap { padding: 0 16px; } }
-
-  .top { border-bottom: 1px solid var(--rule); background: var(--surface); }
-  .top .wrap { display: flex; align-items: baseline; gap: 16px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
-  .brand { font-weight: 600; font-size: 18px; letter-spacing: -.01em; }
-  .top .meta { color: var(--ink-2); font-size: 14px; }
-  .top .mode { margin-left: auto; font-size: 13px; color: var(--ink-2); }
-
-  .snapshot { color: var(--ink-2); font-size: 14px; padding-top: 14px; }
-  .hero { padding: 28px 0 8px; }
-  .hero h1 { font-size: 34px; line-height: 1.15; font-weight: 600; margin: 0 0 6px; letter-spacing: -.015em; max-width: 26ch; }
-  .hero h1.attn { color: var(--bad); }
-  .hero p { margin: 0; color: var(--ink-2); max-width: 70ch; }
-
-  section { margin-top: 32px; }
-  h2 { font-size: 20px; font-weight: 600; margin: 0 0 12px; }
-  .note-s { color: var(--ink-3); font-size: 14px; margin: 8px 0 0; }
-
-  /* The handover: the one bold element */
-  .handover { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 6px; padding: 20px 24px; }
-  .handover-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-  .handover-head h2 { margin: 0; }
-  .tabs { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
-  .tabs button { font: inherit; font-size: 14px; background: none; border: 0; padding: 4px 12px; color: var(--ink-2); cursor: pointer; }
-  .tabs button + button { border-left: 1px solid var(--rule); }
-  .tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 500; }
-  .checked { margin-left: auto; font-size: 14px; color: var(--ok); }
-  .checked.bad { color: var(--bad); }
-  .note { font-size: 17px; line-height: 1.6; max-width: 72ch; }
-  .note p { margin: 0 0 10px; }
-  .note ul { margin: 0 0 12px; padding-left: 20px; }
-  .note li { margin: 2px 0; }
-  .fig { text-decoration: underline dotted; text-decoration-color: var(--ok); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
-  .fig.bad { text-decoration: underline solid; text-decoration-color: var(--bad); background: var(--bad-soft); }
-  .handover details { margin-top: 10px; font-size: 14px; color: var(--ink-2); }
-  .handover summary { cursor: pointer; color: var(--accent); }
-  .handover ol { margin: 8px 0 0; padding-left: 20px; }
-  .handover code { font-size: 13px; }
-
-  /* Lines */
-  .rows { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
-  .row { display: grid; grid-template-columns: 56px 1fr auto auto auto; grid-template-areas: "id prod k1 k2 st";
-         gap: 8px 24px; align-items: center; padding: 14px 20px; }
-  .row + .row { border-top: 1px solid var(--rule); }
-  .row .id { grid-area: id; font-weight: 600; font-size: 18px; }
-  .row .product { grid-area: prod; color: var(--ink-2); }
-  .row .k1 { grid-area: k1; } .row .k2 { grid-area: k2; } .row .status { grid-area: st; justify-self: end; }
-  .kv { text-align: right; }
-  .kv b { display: block; font: 600 20px/1.1 var(--font-num); font-variant-numeric: tabular-nums; }
-  .kv span { font-size: 13px; color: var(--ink-3); }
-  .status { font-size: 14px; font-weight: 500; padding: 2px 10px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
-  .status.OK { color: var(--ok); } .status.WARN { color: var(--warn); } .status.ALERT { color: var(--bad); }
-  @media (max-width: 640px) {
-    .row { grid-template-columns: 36px 1fr auto; grid-template-areas: "id prod st" ". k1 k2"; gap: 8px 16px; padding: 14px 16px; }
-    .kv { text-align: left; }
-    .tabs .hrs { display: none; }
-    .checked { margin-left: 0; width: 100%; }
-  }
-
-  /* Alerts */
-  .events { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
-  .events li + li { border-top: 1px solid var(--rule); }
-  .events .pick { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 112px 1fr; gap: 4px 16px; width: 100%; padding: 14px 20px; cursor: pointer; }
-  .events li:has(.pick:hover), .events li:has(.pick[aria-pressed="true"]) { background: var(--accent-soft); }
-  .events .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .events .when { font: 600 17px var(--font-num); font-variant-numeric: tabular-nums; }
-  .events .what { font-weight: 500; }
-  .events .detail { grid-column: 2; color: var(--ink-2); font-size: 14px; }
-  .empty { padding: 16px 20px; color: var(--ink-2); }
-  @media (max-width: 600px) { .events .pick { grid-template-columns: 1fr; padding: 14px 16px; } .events .detail { grid-column: 1; } }
-
-  /* Chart */
-  .chart-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 20px 12px; margin-top: 12px; }
-  .chart-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
-  .chart-head .t { font-weight: 600; }
-  .chart-head .s { color: var(--ink-2); font-size: 14px; }
-  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
-  select { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 4px 8px; }
-  #chart { position: relative; margin-top: 8px; }
-  #chart svg { display: block; width: 100%; height: 240px; }
-  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 8px; font-size: 13px; white-space: nowrap; display: none; }
-  .legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-2); font-size: 13px; margin-top: 4px; }
-  .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 6px; }
-
-  /* Shift table */
-  .table-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 15px; }
-  th { text-align: left; color: var(--ink-2); font-weight: 500; font-size: 14px; padding: 10px 16px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
-  td { padding: 10px 16px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
-  tr:last-child td { border-bottom: 0; }
-  .num { text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
-  .more { display: none; }
-  .show-more .more { display: table-cell; }
-  .toggle { font: inherit; font-size: 14px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; margin-top: 8px; }
-
-  footer { margin: 40px 0 48px; color: var(--ink-3); font-size: 14px; }
-  .err { color: var(--bad); margin-top: 16px; white-space: pre-wrap; }
-
-  /* ---------- Investigation agent ---------- */
-  :root {
+    --page: #FFFFFF;
+    --panel: #F4F6F4;        /* recessed number panels, the nav rail */
+    --panel-2: #EEF1EE;      /* secondary buttons, selected nav */
+    --line: rgba(20,20,20,.12);
+    --ink: #161616;          /* 17:1 on white */
+    --ink-2: #3A3A3A;
+    --ink-3: #5A5A5A;        /* smallest text; 6.9:1 on white, 6.3:1 on panel */
+    --accent: #1E6B45;       /* actions and healthy status only; 6.3:1 on white */
+    --accent-ink: #154D31;
+    --accent-soft: #E6F0EA;
+    --warn-ink: #8A5A12;
+    --bad: #B42318;
+    --bad-soft: #FBEAE8;
+    /* root causes: differ in hue and lightness */
+    --burner: #D08A2C; --sensor: #7B5EA7; --filler: #3A6EA5; --belt: #4A4A4A;
+    --series: #3A6EA5;
+    --radius: 16px; --radius-s: 12px;
+    --font: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
-  .btn { font: inherit; font-size: 14px; font-weight: 500; border-radius: 6px; padding: 6px 14px; cursor: pointer;
-         border: 1px solid var(--rule); background: var(--surface); color: var(--ink);
-         transition: transform 160ms var(--ease-out), background-color 150ms ease, border-color 150ms ease; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 var(--font); }
+  a { color: var(--accent); }
+  a:hover { color: var(--accent-ink); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .num { font-variant-numeric: tabular-nums; }
+  h1, h2, h3 { margin: 0; }
+
+  /* ---------- shell: rail + view ---------- */
+  .shell { display: flex; min-height: 100vh; }
+  .rail { flex: 0 0 76px; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column;
+          align-items: center; gap: 8px; padding: 20px 0; position: sticky; top: 0; height: 100vh; }
+  .mark { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; margin-bottom: 16px; }
+  .rail a { width: 48px; height: 48px; border-radius: var(--radius-s); display: grid; place-items: center; color: var(--ink-3); text-decoration: none; }
+  .rail a[aria-current="page"] { background: var(--page); color: var(--accent); border: 1px solid var(--line); }
+  .rail a span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  @media (hover: hover) and (pointer: fine) { .rail a:hover { color: var(--ink); } }
+  .view { flex: 1; min-width: 0; padding: 24px 40px 56px; }
+  .inner { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+  @media (max-width: 760px) {
+    .shell { flex-direction: column; }
+    .rail { flex-direction: row; height: auto; position: sticky; top: 0; z-index: 5; padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--line); justify-content: space-around; }
+    .mark { display: none; }
+    .view { padding: 20px 16px 48px; }
+  }
+
+  .topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--ink-3); }
+  .topbar .brand { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .topbar .right { margin-left: auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 12px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink-2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+  .snapshot { font-size: 14px; color: var(--ink-3); }
+
+  /* ---------- building blocks ---------- */
+  .card { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .card-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .card-head h2 { font-size: 16px; font-weight: 600; }
+  .card-head .aside { margin-left: auto; font-size: 13px; color: var(--ink-3); }
+  .well { background: var(--panel); border-radius: var(--radius-s); padding: 14px 16px; }
+  .well b { display: block; font-size: 26px; font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .well b small { font-size: 14px; color: var(--ink-3); font-weight: 400; }
+  .well span { font-size: 13px; color: var(--ink-3); }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { .grid-3 { grid-template-columns: 1fr; } }
+  .h1 { font-size: 44px; line-height: 1.1; font-weight: 600; letter-spacing: -0.02em; }
+  .h1 em { font-style: normal; color: var(--accent); }
+  .h1.attn em { color: var(--bad); }
+  .lede { font-size: 16px; color: var(--ink-3); margin: 8px 0 0; max-width: 70ch; }
+  @media (max-width: 600px) { .h1 { font-size: 32px; } }
+  .kicker { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .btn { font: inherit; font-size: 14px; font-weight: 500; border-radius: var(--radius-s); padding: 11px 20px; cursor: pointer;
+         border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); min-height: 44px;
+         transition: transform 160ms var(--ease-out), background-color 150ms ease; }
   .btn:active { transform: scale(0.97); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
-  @media (hover: hover) and (pointer: fine) {
-    .btn:hover { border-color: var(--ink-3); }
-    .btn.primary:hover { filter: brightness(1.08); }
-  }
-  .events li { display: grid; grid-template-columns: 1fr auto; align-items: center; }
-  .events .side { display: flex; align-items: center; gap: 10px; padding: 0 20px 0 8px; }
-  .cause { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
-  .cause b { color: var(--ink); font-weight: 500; }
-  @media (max-width: 600px) {
-    .events li { grid-template-columns: 1fr; }
-    .events .side { padding: 0 16px 14px; justify-content: space-between; }
-  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #FFFFFF; }
+  @media (hover: hover) and (pointer: fine) { .btn.primary:hover { background: var(--accent-ink); } .btn:hover { border-color: rgba(20,20,20,.3); } }
+  .link { font: inherit; font-size: 14px; color: var(--accent); background: none; border: 0; padding: 8px 0; cursor: pointer; }
+  .tabs { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--panel); }
+  .tabs button { font: inherit; font-size: 13px; color: var(--ink-3); background: none; border: 0; border-radius: 8px; padding: 6px 12px; cursor: pointer; min-height: 32px; }
+  .tabs button[aria-selected="true"] { background: var(--page); color: var(--ink); font-weight: 500; box-shadow: 0 0 0 1px var(--line); }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+  .c-burner_fault { background: var(--burner); } .c-thermocouple_drift { background: var(--sensor); }
+  .c-belt_slowdown { background: var(--belt); } .c-filler_drift { background: var(--filler); } .c-unclear { background: #9A9A9A; }
+  .empty { color: var(--ink-3); padding: 8px 0; }
+  .err { color: var(--bad); white-space: pre-wrap; }
 
-  dialog.inv { margin: 0 0 0 auto; height: 100dvh; max-height: 100dvh; width: min(560px, 100vw); max-width: 100vw;
-               border: 0; border-left: 1px solid var(--rule); padding: 0; background: var(--bg); color: var(--ink);
-               transform: translateX(100%); transition: transform 200ms var(--ease-out); overscroll-behavior: contain; }
-  dialog.inv[data-open] { transform: translateX(0); transition: transform 320ms var(--ease-drawer); }
-  dialog.inv::backdrop { background: rgba(18, 23, 25, .32); opacity: 0; transition: opacity 200ms var(--ease-out); }
-  dialog.inv[data-open]::backdrop { opacity: 1; }
-  @media (max-width: 600px) {
-    dialog.inv { margin: auto 0 0; width: 100vw; height: 92dvh; border-left: 0; border-top: 1px solid var(--rule);
-                 border-radius: 12px 12px 0 0; transform: translateY(100%); }
-    dialog.inv[data-open] { transform: translateY(0); }
-  }
-  .inv-head { position: sticky; top: 0; z-index: 1; background: var(--surface); border-bottom: 1px solid var(--rule);
-              padding: 16px 20px 14px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
-  .inv-kicker { font-size: 13px; color: var(--ink-3); }
-  .inv-title { font-size: 18px; font-weight: 600; line-height: 1.3; margin: 0; }
-  .inv-head .x { grid-row: 1 / span 2; grid-column: 2; align-self: start; font-size: 20px; line-height: 1; padding: 6px 10px; }
-  .inv-body { padding: 16px 20px 32px; }
-  .replay-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--ink-2); font-size: 14px; margin-bottom: 8px; }
-  .linkish { font: inherit; font-size: 14px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
+  /* ---------- overview ---------- */
+  .line-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .line-head .id { font-size: 13px; color: var(--ink-3); }
+  .line-head .name { font-size: 17px; font-weight: 600; }
+  .status { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--accent); }
+  .status.WARN { color: var(--warn-ink); } .status.WARN .dot { background: var(--warn-ink); }
+  .status.ALERT { color: var(--bad); } .status.ALERT .dot { background: var(--bad); }
+  .tl { display: grid; grid-template-columns: 36px minmax(0, 1fr); row-gap: 10px; align-items: center; }
+  .tl .lane-id { font-size: 13px; color: var(--ink-3); }
+  .lane { position: relative; height: 40px; border-radius: var(--radius-s); background: var(--panel); }
+  .lane a { position: absolute; top: 10px; height: 20px; min-width: 8px; border-radius: 6px; }
+  .lane a:focus-visible { outline-offset: 3px; }
+  .shiftline { position: absolute; top: -6px; bottom: -6px; width: 1px; background: var(--line); pointer-events: none; }
+  .ticks { position: relative; height: 18px; font-size: 12px; color: var(--ink-3); }
+  .ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--line); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .note { font-size: 15px; color: var(--ink-2); }
+  .note p { margin: 0 0 10px; } .note p:first-child { font-size: 19px; color: var(--ink); line-height: 1.4; }
+  .note ul { margin: 0 0 12px; padding-left: 20px; } .note li { margin: 4px 0; }
+  .fig { text-decoration: underline dotted; text-decoration-color: var(--accent); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+  .fig.bad { text-decoration: underline solid var(--bad); background: var(--bad-soft); }
+  .bar { margin-top: 14px; } .bar:first-of-type { margin-top: 0; }
+  .bar .row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+  .bar .track { display: block; height: 8px; border-radius: 99px; background: var(--panel); }
+  .bar .fill { display: block; height: 8px; border-radius: 99px; background: #9AA39D; }
+  .bar.agent .fill { background: var(--accent); }
 
-  .steps { list-style: none; margin: 0; padding: 0; position: relative; }
+  /* ---------- incidents ---------- */
+  .split { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+  .list { flex: 1 1 300px; max-width: 360px; display: flex; flex-direction: column; gap: 4px; }
+  .list .head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 12px 10px; }
+  .list .head h2 { font-size: 16px; font-weight: 600; }
+  .list a { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 2px 10px; padding: 12px; border-radius: var(--radius-s);
+            color: inherit; text-decoration: none; border: 1px solid transparent; }
+  .list a .t { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .list a .w { font-size: 14px; }
+  .list a .c { grid-column: 2; font-size: 13px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 8px; }
+  .list a[aria-current="true"] { background: var(--accent-soft); border-color: rgba(30,107,69,.25); }
+  .list a[aria-current="true"] .w { font-weight: 600; }
+  @media (hover: hover) and (pointer: fine) { .list a:hover { background: var(--panel); } }
+  .back { display: none; }
+  @media (max-width: 760px) {
+    .split.has-pick .list { display: none; }
+    .split.has-pick .back { display: inline-block; margin-bottom: 8px; font-size: 14px; }
+  }
+  .detail { flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px; max-width: 860px; }
+  .detail .h1 { font-size: 36px; }
+  .diag { display: flex; flex-direction: column; gap: 18px; }
+  .diag-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .conf { font-size: 12px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink-2); }
+  .conf.high { color: var(--accent); border-color: rgba(30,107,69,.35); }
+  .conf.low { color: var(--bad); }
+  .cause-name { font-size: 28px; font-weight: 600; letter-spacing: -0.015em; display: flex; align-items: center; gap: 12px; }
+  .cause-name .swatch { width: 14px; height: 14px; border-radius: 4px; }
+  .summary { font-size: 16px; color: var(--ink-2); margin: 0; max-width: 64ch; }
+  .tile b { font-size: 22px; }
+  .tile .say { display: block; font-size: 13px; margin-top: 4px; }
+  .say.ok { color: var(--accent); } .say.hot { color: var(--warn-ink); }
+  .spark { display: block; width: 100%; height: 96px; }
+  .spark-axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+  .actions { margin: 0; padding: 0; list-style: none; counter-reset: a; display: flex; flex-direction: column; gap: 8px; }
+  .actions li { counter-increment: a; display: flex; gap: 12px; }
+  .actions li::before { content: counter(a, decimal-leading-zero); font-size: 12px; color: var(--accent); font-weight: 600; padding-top: 3px; font-variant-numeric: tabular-nums; }
+  .review { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding-top: 16px; border-top: 1px solid var(--line); }
+  .review .meta { margin-left: auto; font-size: 13px; color: var(--ink-3); }
+  .review select, .review input { font: inherit; font-size: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; background: var(--page); color: var(--ink); min-height: 44px; }
+  .review input { flex: 1 1 200px; min-width: 0; }
+  .verdict { font-size: 14px; padding: 12px 14px; border-radius: var(--radius-s); background: var(--accent-soft); }
+  .verdict.wrong { background: var(--bad-soft); }
+  .also { font-size: 13px; color: var(--ink-3); }
+  .trace-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .chips span { font-size: 12px; padding: 5px 10px; border-radius: 99px; background: var(--panel); color: var(--ink-2); }
+  .chips i { width: 12px; height: 1px; background: var(--line); }
+  .steps { list-style: none; margin: 16px 0 0; padding: 0; }
   .step { position: relative; padding: 0 0 18px 28px; }
-  .step::before { content: ""; position: absolute; left: 7px; top: 18px; bottom: 0; width: 1px; background: var(--rule); }
+  .step::before { content: ""; position: absolute; left: 7px; top: 18px; bottom: 0; width: 1px; background: var(--line); }
   .step:last-child::before { display: none; }
-  .step .dot { position: absolute; left: 0; top: 4px; width: 15px; height: 15px; border-radius: 50%;
-               border: 2px solid var(--accent); background: var(--surface); }
-  .step.done .dot { background: var(--accent); }
-  .step.running .dot { animation: pulse 900ms ease-in-out infinite alternate; }
+  .step .sdot { position: absolute; left: 0; top: 4px; width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--accent); background: var(--page); }
+  .step.done .sdot { background: var(--accent); }
+  .step.running .sdot { animation: pulse 900ms ease-in-out infinite alternate; }
   @keyframes pulse { from { opacity: 1; } to { opacity: .35; } }
-  .step .thought { margin: 0; }
-  .step .call { display: inline-block; margin-top: 4px; font: 12.5px/1.4 var(--mono); color: var(--ink-2);
-                background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 6px; }
-  .step .found { margin-top: 8px; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; font-size: 14px; }
+  .step p { margin: 0; }
+  .step code { display: inline-block; margin-top: 4px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--ink-3); background: var(--panel); border-radius: 4px; padding: 1px 6px; }
+  .step .found { margin-top: 8px; background: var(--panel); border-radius: var(--radius-s); padding: 10px 12px; font-size: 14px; color: var(--ink-2); }
   .step.running .found { display: none; }
-  .step .wait { display: none; color: var(--ink-3); font-size: 14px; margin-top: 6px; }
-  .step.running .wait { display: block; }
-  .found table { font-size: 13.5px; }
-  .found th, .found td { padding: 3px 8px 3px 0; border: 0; }
-  .found th { font-size: 12.5px; color: var(--ink-3); }
+  .found table { border-collapse: collapse; font-size: 13px; }
+  .found th, .found td { padding: 3px 12px 3px 0; text-align: left; }
+  .found th { font-weight: 500; color: var(--ink-3); }
+  .found td.r, .found th.r { text-align: right; font-variant-numeric: tabular-nums; }
   .found tr.moved td { color: var(--ink); font-weight: 600; }
-  .found td { color: var(--ink-2); }
-  .found .spark { display: block; width: 100%; height: 56px; margin-top: 6px; }
   .found details { margin-top: 6px; }
-  .found summary { cursor: pointer; color: var(--ink-3); font-size: 13px; }
-  .found pre { font: 12px/1.45 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; margin: 6px 0 0; }
-  .delta-up { color: var(--bad); } .delta-down { color: var(--series); }
-
+  .found summary { cursor: pointer; font-size: 13px; color: var(--ink-3); }
+  .found pre { font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow: auto; margin: 6px 0 0; }
   .reveal { animation: reveal 240ms var(--ease-out) both; }
   @keyframes reveal { from { opacity: 0; transform: translateY(6px); } }
 
-  .diag { margin-top: 6px; background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent);
-          border-radius: 6px; padding: 16px 18px; }
-  .diag.enter { animation: diag-in 260ms var(--ease-out) both; }
-  @keyframes diag-in { from { opacity: 0; transform: scale(0.98); } }
-  .diag-k { font-size: 13px; color: var(--ink-3); }
-  .diag-cause { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 2px 0 6px; }
-  .diag-cause strong { font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
-  .conf { font-size: 13px; border: 1px solid currentColor; border-radius: 99px; padding: 0 8px; color: var(--ok); }
-  .conf.medium { color: var(--warn); } .conf.low { color: var(--bad); }
-  .diag p { margin: 0 0 10px; }
-  .diag h3 { font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
-  .diag ul, .diag ol { margin: 0; padding-left: 20px; }
-  .diag li { margin: 3px 0; }
-  .diag .meta { font-size: 13px; color: var(--ink-3); margin-top: 12px; }
-  .review { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .review .q { width: 100%; font-size: 14px; color: var(--ink-2); }
-  .review select, .review input { font: inherit; font-size: 14px; }
-  .review input { flex: 1 1 180px; min-width: 0; border: 1px solid var(--rule); border-radius: 6px; padding: 5px 8px; background: var(--surface); color: var(--ink); }
-  .verdict { margin-top: 12px; font-size: 14px; padding: 10px 12px; border-radius: 6px; background: var(--accent-soft); }
-  .verdict.wrong { background: var(--bad-soft); }
-
-  .acc { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 20px; }
-  .acc p { margin: 0 0 12px; color: var(--ink-2); max-width: 72ch; }
-  .bar { display: grid; grid-template-columns: minmax(0, 220px) 1fr 92px; gap: 12px; align-items: center; margin: 8px 0; font-size: 14px; }
-  .bar .track, .bar .fill { display: block; }
-  .bar .track { height: 10px; background: var(--grid); border-radius: 5px; overflow: hidden; }
-  .bar .fill { height: 100%; background: var(--ink-3); border-radius: 5px; }
-  .bar.agent .fill { background: var(--accent); }
-  .bar .v { font: 600 15px var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
-  @media (max-width: 600px) { .bar { grid-template-columns: 1fr 64px; } .bar .track { grid-column: 1 / -1; grid-row: 2; } }
+  /* ---------- shifts and quality ---------- */
+  .table-box { overflow-x: auto; }
+  table.data { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.data th { text-align: left; font-weight: 500; font-size: 13px; color: var(--ink-3); padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.data td { padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.data tr:last-child td { border-bottom: 0; }
+  table.data .r { text-align: right; font-variant-numeric: tabular-nums; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  select { font: inherit; font-size: 14px; color: var(--ink); background: var(--page); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; min-height: 40px; }
+  #chart { position: relative; margin-top: 8px; }
+  #chart svg { display: block; width: 100%; height: 260px; }
+  .tip { position: absolute; pointer-events: none; background: var(--page); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 13px; white-space: nowrap; display: none; }
 
   @media (prefers-reduced-motion: reduce) {
-    dialog.inv, dialog.inv[data-open] { transform: none; transition: opacity 200ms ease; opacity: 0; }
-    dialog.inv[data-open] { opacity: 1; }
-    .reveal, .diag.enter { animation: fade 200ms ease both; }
-    .step.running .dot { animation: none; opacity: .5; }
+    .reveal { animation: fade 200ms ease both; }
+    .step.running .sdot { animation: none; opacity: .5; }
     @keyframes fade { from { opacity: 0; } }
   }
 </style>
 </head>
 <body>
-<div class="top"><div class="wrap">
-  <span class="brand">LinePulse</span>
-  <span class="meta" id="asof">Loading…</span>
-  <span class="mode" id="mode"></span>
-</div></div>
+<div class="shell">
+  <nav class="rail" aria-label="Main">
+    <span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"><path d="M2 12h4l3-7 4 14 3-7h6"/></svg></span>
+    <a href="#overview" data-nav="overview"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Overview</span></a>
+    <a href="#incidents" data-nav="incidents"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Incidents</span></a>
+    <a href="#shifts" data-nav="shifts"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg><span>Shifts and signals</span></a>
+    <a href="#quality" data-nav="quality"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg><span>Data quality</span></a>
+  </nav>
 
-<main class="wrap">
-  <div id="snapshot" class="snapshot" hidden></div>
-  <div id="error" class="err" hidden></div>
+  <main class="view"><div class="inner">
+    <header class="topbar">
+      <span class="brand">LinePulse</span><span id="view-name">Overview</span>
+      <span class="right"><span class="num" id="asof"></span><span class="pill" id="mode"><span class="dot"></span>Loading</span></span>
+    </header>
+    <div id="snapshot" class="snapshot" hidden></div>
+    <div id="error" class="err" hidden></div>
 
-  <div class="hero">
-    <h1 id="headline">Checking the lines…</h1>
-    <p id="subline"></p>
-  </div>
-
-  <section id="handover-section" hidden>
-    <div class="handover">
-      <div class="handover-head">
-        <h2>Shift handover</h2>
-        <div class="tabs" role="tablist" id="shift-tabs"></div>
-        <span class="checked" id="checked"></span>
+    <!-- OVERVIEW -->
+    <section data-view="overview" class="inner" style="gap: 24px">
+      <div>
+        <h1 class="h1" id="headline">Checking the lines…</h1>
+        <p class="lede" id="subline"></p>
       </div>
-      <div class="note" id="note"></div>
-      <details id="how">
-        <summary>How this note was written and checked</summary>
-        <div id="how-body"></div>
-      </details>
-    </div>
-  </section>
-
-  <section>
-    <h2>Lines</h2>
-    <div class="rows" id="lines"></div>
-  </section>
-
-  <section>
-    <h2>Drift alerts</h2>
-    <ul class="events" id="alerts"></ul>
-    <div class="chart-box">
-      <div class="chart-head">
-        <div><div class="t" id="chart-title">Signal</div><div class="s" id="chart-sub"></div></div>
-        <div class="controls">
-          <select id="sel-line" aria-label="Line"></select>
-          <select id="sel-signal" aria-label="Signal">
-            <option value="oven_z1_c">Oven zone 1 (°C)</option>
-            <option value="oven_z2_c">Oven zone 2 (°C)</option>
-            <option value="oven_z3_c">Oven zone 3 (°C)</option>
-            <option value="fill_weight_g">Fill weight (g)</option>
-            <option value="belt_speed_mpm">Belt speed (m/min)</option>
-            <option value="proofer_rh_pct">Proofer humidity (%)</option>
-          </select>
-          <select id="sel-window" aria-label="Time window">
-            <option value="120">Last 2 h</option><option value="240">Last 4 h</option>
-            <option value="480" selected>Last 8 h</option><option value="1440">Last 24 h</option>
-          </select>
+      <div class="grid-2" id="lines"></div>
+      <section class="card" aria-labelledby="tl-title">
+        <div class="card-head"><h2 id="tl-title">Incidents over time</h2><span class="aside">Select one to see why it happened.</span></div>
+        <div class="tl" id="timeline"></div>
+        <div class="legend">
+          <span><i class="swatch c-burner_fault"></i>Burner fault</span><span><i class="swatch c-thermocouple_drift"></i>Sensor drift</span>
+          <span><i class="swatch c-belt_slowdown"></i>Belt slowdown</span><span><i class="swatch c-filler_drift"></i>Filler drift</span>
         </div>
+      </section>
+      <div class="grid-2" style="grid-template-columns: minmax(0, 2fr) minmax(0, 1fr)">
+        <section class="card" id="handover-card" hidden>
+          <div class="card-head"><h2>Shift handover</h2><div class="tabs" role="tablist" aria-label="Shift" id="shift-tabs"></div><span class="aside" id="checked"></span></div>
+          <div class="note" id="note"></div>
+          <details style="font-size: 13px; color: var(--ink-3)"><summary style="cursor: pointer; color: var(--accent)">How this note was written and checked</summary><div id="how-body"></div></details>
+        </section>
+        <section class="card" id="acc-card" hidden>
+          <div class="card-head"><h2>Root cause named right</h2></div>
+          <div id="acc"></div>
+        </section>
       </div>
-      <div id="chart"><div class="tip" id="tip"></div></div>
-      <div class="legend">
-        <span><i style="background:var(--series)"></i>Per-minute average</span>
-        <span><i style="background:var(--ink-3)"></i>Setpoint</span>
-        <span><i style="background:var(--band);height:10px"></i>Normal range</span>
-        <span><i style="background:var(--bad);height:6px;border-radius:3px"></i>Drifting</span>
+    </section>
+
+    <!-- INCIDENTS -->
+    <section data-view="incidents" hidden>
+      <div class="split">
+        <nav class="list" aria-label="Incidents" id="incident-list"></nav>
+        <article class="detail" id="detail"></article>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="acc-section" hidden>
-    <h2>How often the investigation names the right cause</h2>
-    <div class="acc" id="acc"></div>
-  </section>
+    <!-- SHIFTS AND SIGNALS -->
+    <section data-view="shifts" class="inner" style="gap: 24px" hidden>
+      <h1 class="h1" style="font-size: 32px">Shifts and signals</h1>
+      <section class="card">
+        <div class="card-head"><h2>Shift results</h2><span class="aside">Giveaway is accepted weight above the 90 g label, priced at an illustrative CAD 2.50/kg.</span></div>
+        <div class="table-box"><table class="data" id="shifts"></table></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2 id="chart-title">Signal</h2><span class="aside" id="chart-sub"></span>
+          <div class="controls" style="width: 100%">
+            <select id="sel-line" aria-label="Line"></select>
+            <select id="sel-signal" aria-label="Signal">
+              <option value="oven_z1_c">Oven zone 1 (°C)</option><option value="oven_z2_c">Oven zone 2 (°C)</option>
+              <option value="oven_z3_c">Oven zone 3 (°C)</option><option value="fill_weight_g">Fill weight (g)</option>
+              <option value="belt_speed_mpm">Belt speed (m/min)</option><option value="proofer_rh_pct">Proofer humidity (%)</option>
+            </select>
+            <select id="sel-window" aria-label="Time window">
+              <option value="120">Last 2 h</option><option value="240">Last 4 h</option>
+              <option value="480" selected>Last 8 h</option><option value="1440">Last 24 h</option>
+            </select>
+          </div>
+        </div>
+        <div id="chart"><div class="tip" id="tip"></div></div>
+      </section>
+    </section>
 
-  <section>
-    <h2>Shift results</h2>
-    <div class="table-box" id="shift-box"><table id="shifts"></table></div>
-    <button class="toggle" id="toggle-more" aria-expanded="false">Show reject and weight detail</button>
-  </section>
-
-  <footer id="dq"></footer>
-</main>
-
-<dialog class="inv" id="inv" aria-labelledby="inv-title">
-  <div class="inv-head">
-    <span class="inv-kicker" id="inv-kicker">Investigation</span>
-    <h2 class="inv-title" id="inv-title"></h2>
-    <button class="btn x" id="inv-close" aria-label="Close investigation">×</button>
-  </div>
-  <div class="inv-body">
-    <div class="replay-bar"><span id="replay-status"></span><button class="linkish" id="replay-skip">Show all steps</button></div>
-    <ol class="steps" id="steps"></ol>
-    <div id="diag-host"></div>
-  </div>
-</dialog>
+    <!-- DATA QUALITY -->
+    <section data-view="quality" class="inner" style="gap: 24px" hidden>
+      <h1 class="h1" style="font-size: 32px">Data quality</h1>
+      <section class="card">
+        <div class="card-head"><h2>Records set aside</h2><span class="aside">None of these reached the numbers on other pages.</span></div>
+        <div class="table-box"><table class="data" id="dq"></table></div>
+      </section>
+    </section>
+  </div></main>
+</div>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -352,9 +315,13 @@ const esc = v => String(v ?? "–").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&
 const fmt = (v, d = 1) => v == null ? "–" : Number(v).toLocaleString("en-CA", {minimumFractionDigits: d, maximumFractionDigits: d});
 const int = v => v == null ? "–" : Number(v).toLocaleString("en-CA");
 const hm = iso => iso ? new Date(iso).toISOString().slice(11, 16) : "–";
-const SIGNAL = {oven_z1_c: ["Oven zone 1", "°C"], oven_z2_c: ["Oven zone 2", "°C"], oven_z3_c: ["Oven zone 3", "°C"], fill_weight_g: ["Fill weight", "g"], belt_speed_mpm: ["Belt speed", "m/min"], proofer_rh_pct: ["Proofer humidity", "%"]};
+const SIGNAL = {oven_z1_c: ["Oven zone 1", "°C"], oven_z2_c: ["Oven zone 2", "°C"], oven_z3_c: ["Oven zone 3", "°C"],
+  fill_weight_g: ["Fill weight", "g"], belt_speed_mpm: ["Belt speed", "m/min"], proofer_rh_pct: ["Proofer humidity", "%"]};
+const CAUSE = {burner_fault: "Burner fault", thermocouple_drift: "Sensor drift", belt_slowdown: "Belt slowdown",
+  filler_drift: "Filler drift", unclear: "Unclear"};
 const SHIFT_HOURS = {A: "06–14", B: "14–22", C: "22–06"};
 const STATUS_TEXT = {OK: "Running", WARN: "High scrap", ALERT: "Drifting"};
+const VIEW_NAME = {overview: "Overview", incidents: "Incidents", shifts: "Shifts and signals", quality: "Data quality"};
 
 // Static snapshot mode (GitHub Pages): scripts/build_static_demo.py sets window.LINEPULSE_STATIC
 // and writes the same JSON the API returns under data/. Each API path maps to one file.
@@ -370,7 +337,6 @@ function staticPath(path) {
                  "/api/investigations": "investigations", "/api/investigations/evaluation": "investigation-eval"};
   return {url: `data/${files[p]}.json`};
 }
-
 async function get(path) {
   const target = STATIC ? staticPath(path) : {url: path};
   const r = await fetch(target.url);
@@ -378,34 +344,103 @@ async function get(path) {
   const data = await r.json();
   return target.last ? data.slice(-target.last) : data;
 }
+function showError(e) { $("#error").hidden = false; $("#error").textContent = e.message; }
 
-// ---------- hero
-function renderHero(lines, alerts) {
-  const h = $("#headline"), attn = lines.filter(l => l.status !== "OK");
-  if (!attn.length) {
-    h.textContent = lines.length === 2 ? "Both lines are running normally." : `All ${lines.length} lines are running normally.`;
-    h.className = "";
-  } else {
-    const l = attn[0], a = alerts.find(a => a.line_id === l.line_id && a.status === "open");
-    h.textContent = a ? `${l.line_id} needs attention: ${SIGNAL[a.signal][0].toLowerCase()} is running ${a.direction}.`
-                      : `${l.line_id} needs attention: scrap is above 2% in the last 15 minutes.`;
-    h.className = "attn";
+// ---------- state
+const S = {lines: [], alerts: [], shifts: [], dq: [], notes: [], invs: new Map(), evaluation: null, incidents: [], range: null};
+const details = new Map();   // alert_id -> full investigation record
+
+// Alerts on the same line whose windows overlap (or follow within 10 min) are one incident:
+// a slowing belt raises a belt alarm and several hot-zone alarms, but it is one problem.
+function groupIncidents(alerts) {
+  const sorted = [...alerts].sort((a, b) => Date.parse(a.start_minute) - Date.parse(b.start_minute));
+  const open = {}, out = [];
+  for (const a of sorted) {
+    const s = Date.parse(a.start_minute), e = Date.parse(a.end_minute), cur = open[a.line_id];
+    if (cur && s <= cur.endMs + 10 * 60000) { cur.alerts.push(a); cur.endMs = Math.max(cur.endMs, e); continue; }
+    open[a.line_id] = {id: a.alert_id, line_id: a.line_id, primary: a, alerts: [a], startMs: s, endMs: e};
+    out.push(open[a.line_id]);
   }
-  const open = alerts.filter(a => a.status === "open").length;
-  $("#subline").textContent = `${alerts.length} drift alert${alerts.length === 1 ? "" : "s"} in this period, ` +
-    (open ? `${open} still open.` : "all resolved.") + " Data up to " + (lines[0] ? hm(lines[0].as_of) + " UTC." : "–");
-  if (lines[0]) $("#asof").textContent = "Data as of " + new Date(lines[0].as_of).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+  return out.sort((a, b) => b.startMs - a.startMs);
+}
+function reviewKey(id) { return `linepulse.review.${id}`; }
+function reviewFor(id, serverReview) {
+  if (!STATIC) return serverReview || null;
+  try { return JSON.parse(localStorage.getItem(reviewKey(id)) || "null"); } catch { return null; }
+}
+function causeOf(inc) {
+  const inv = S.invs.get(inc.id);
+  if (!inv) return null;
+  const rv = reviewFor(inc.id, inv.review);
+  return rv ? rv.root_cause : inv.root_cause;
+}
+function incidentTitle(inc) {
+  const a = inc.primary, [name] = SIGNAL[a.signal] || [a.signal];
+  return `${a.line_id} ${name.toLowerCase()} ${a.direction}`;
+}
+
+// ---------- overview
+function renderOverview() {
+  const lines = S.lines, h = $("#headline");
+  const attn = lines.filter(l => l.status !== "OK");
+  if (!attn.length) {
+    h.className = "h1";
+    h.innerHTML = lines.length === 2 ? "Both lines are <em>running.</em>" : `All ${lines.length} lines are <em>running.</em>`;
+  } else {
+    const l = attn[0], a = S.alerts.find(x => x.line_id === l.line_id && x.status === "open");
+    h.className = "h1 attn";
+    h.innerHTML = a ? `${esc(l.line_id)} ${esc(SIGNAL[a.signal][0].toLowerCase())} is <em>running ${esc(a.direction)}.</em>`
+                    : `${esc(l.line_id)} scrap is <em>above 2%.</em>`;
+  }
+  const n = S.incidents.length, open = S.incidents.filter(i => i.alerts.some(a => a.status === "open")).length;
+  const sc = STATIC?.scorecard;
+  $("#subline").textContent = `${n} incident${n === 1 ? "" : "s"} in this period, ${open ? `${open} still open` : "all resolved"}.` +
+    (sc ? ` ${sc.detected} of ${sc.faults} injected faults were caught, with ${sc.false_alarms} false alarms.` : "");
+
+  $("#lines").innerHTML = lines.map(l => `
+    <article class="card">
+      <div class="line-head"><span class="id">${esc(l.line_id)}</span><span class="name">${esc(l.product)}</span>
+        <span class="status ${esc(l.status)}"><span class="dot"></span>${STATUS_TEXT[l.status] || esc(l.status)}</span></div>
+      <div class="grid-3">
+        <div class="well"><b>${fmt(l.scrap_rate_15m_pct, 2)}<small>%</small></b><span>Scrap, last 15 min</span></div>
+        <div class="well"><b>${fmt(l.fill_weight_g, 1)}<small> g</small></b><span>Average pack</span></div>
+        <div class="well"><b>${esc((l.current_lot || "").split("-").pop())}</b><span>Lot in progress</span></div>
+      </div>
+    </article>`).join("");
+
+  renderTimeline();
+}
+
+function renderTimeline() {
+  const r = S.range;
+  if (!r || !S.incidents.length) { $("#timeline").innerHTML = `<span></span><div class="empty">No incidents in this period.</div>`; return; }
+  const pos = t => Math.max(0, Math.min(100, 100 * (t - r.start) / (r.end - r.start)));
+  const shiftLines = [], ticks = [];
+  for (let t = Math.ceil(r.start / 36e5) * 36e5; t <= r.end; t += 36e5) {
+    const hh = new Date(t).getUTCHours();
+    if ([6, 14, 22].includes(hh)) shiftLines.push({left: pos(t), label: {6: "A", 14: "B", 22: "C"}[hh]});
+    if (hh % 4 === 2) ticks.push({left: pos(t), label: `${String(hh).padStart(2, "0")}:00`});
+  }
+  const lineIds = [...new Set(S.lines.map(l => l.line_id))];
+  const lanes = lineIds.map(id => {
+    const marks = S.incidents.filter(i => i.line_id === id).map(i => {
+      const c = causeOf(i) || "unclear";
+      return `<a href="#incidents/${encodeURIComponent(i.id)}" class="c-${esc(c)}" style="left:${pos(i.startMs).toFixed(2)}%;width:${Math.max(0.8, pos(i.endMs) - pos(i.startMs)).toFixed(2)}%"
+        aria-label="${esc(hm(new Date(i.startMs).toISOString()))} ${esc(incidentTitle(i))}: ${esc(CAUSE[c] || c)}" title="${esc(hm(new Date(i.startMs).toISOString()))} ${esc(incidentTitle(i))}"></a>`;
+    }).join("");
+    return `<span class="lane-id">${esc(id)}</span><div class="lane">${shiftLines.map(s => `<i class="shiftline" style="left:${s.left}%"></i>`).join("")}${marks}</div>`;
+  }).join("");
+  $("#timeline").innerHTML = `<span></span><div class="ticks">${shiftLines.map(s => `<span style="left:${Math.min(97, s.left + 3)}%">Shift ${s.label}</span>`).join("")}</div>` +
+    lanes + `<span></span><div class="ticks">${ticks.map(t => `<span style="left:${t.left}%">${t.label}</span>`).join("")}</div>`;
 }
 
 // ---------- handover
-let notes = [];
-let lastAlerts = null;
 function noteHtml(note, unverified) {
   const bad = new Set(unverified || []);
   const token = /L\d+-\d{8}-\d{3}|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}:\d{2}\b|(?<![\w.])[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/g;
   const label = /(zone|zones|Shift|shift|and|,)\s*$/;
   const mark = text => esc(text).replace(token, (m, off, s) => {
-    if (/^\d$/.test(m) && label.test(s.slice(Math.max(0, off - 7), off))) return m; // "zone 3", "Shift A" labels
+    if (/^\d$/.test(m) && label.test(s.slice(Math.max(0, off - 7), off))) return m;
     return `<span class="fig${bad.has(m) || bad.has(m.replace(/^\+/, "")) ? " bad" : ""}">${m}</span>`;
   });
   const inline = t => mark(t).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
@@ -418,417 +453,326 @@ function noteHtml(note, unverified) {
   }
   return html + (list ? "</ul>" : "");
 }
-
+let noteIndex = null;
 function showNote(i) {
-  const n = notes[i];
+  noteIndex = i;
+  const n = S.notes[i];
   document.querySelectorAll("#shift-tabs button").forEach((b, k) => b.setAttribute("aria-selected", String(k === i)));
   $("#note").innerHTML = noteHtml(n.note, n.unverified);
   const ok = n.figures_verified === n.figures_total;
-  $("#checked").className = "checked" + (ok ? "" : " bad");
-  $("#checked").textContent = ok ? `All ${n.figures_total} figures checked against the data`
-                                 : `${n.figures_total - n.figures_verified} of ${n.figures_total} figures not found in the data`;
-  const who = n.writer === "llm" ? `Written by ${esc(n.model)} through ${n.tool_calls.length} tool calls over the gold tables`
-                                 : "Written by the fallback template (no LLM key configured), from the same tool calls";
-  $("#how-body").innerHTML = `<p>${who}${n.retried ? ", rewritten once after the checker found unsupported figures" : ""}.
-    Every number, time and lot ID in the note is matched against what the tools returned: figures with a dotted underline were found,
-    figures highlighted in red were not.</p><ol>${n.tool_calls.map(c =>
-      `<li><code>${esc(c.tool)}(${esc(Object.entries(c.args || {}).map(([k, v]) => `${k}=${v}`).join(", "))})</code></li>`).join("")}</ol>`;
+  $("#checked").style.color = ok ? "var(--accent)" : "var(--bad)";
+  $("#checked").textContent = ok ? `All ${n.figures_total} figures checked` : `${n.figures_total - n.figures_verified} of ${n.figures_total} figures not found`;
+  const who = n.writer === "llm" ? `Written by ${esc(n.model)} through ${n.tool_calls.length} tool calls` : "Written by the fallback template (no LLM key configured), from the same tool calls";
+  $("#how-body").innerHTML = `<p>${who}${n.retried ? ", rewritten once after the check found unsupported figures" : ""}. Every number, time and lot ID is matched against what the tools returned: dotted underline = found, red = not found.</p>`;
 }
-
-function renderHandover(list) {
+function renderHandover() {
   const order = {A: 0, B: 1, C: 2};
-  notes = [...list].sort((a, b) => a.shift_date.localeCompare(b.shift_date) || order[a.shift] - order[b.shift]);
-  $("#handover-section").hidden = !notes.length;
-  if (!notes.length) return;
-  $("#shift-tabs").innerHTML = notes.map((n, i) =>
-    `<button role="tab" data-i="${i}">Shift ${esc(n.shift)} <span class="hrs" style="color:var(--ink-3)">${SHIFT_HOURS[n.shift] || ""}</span></button>`).join("");
+  S.notes.sort((a, b) => a.shift_date.localeCompare(b.shift_date) || order[a.shift] - order[b.shift]);
+  $("#handover-card").hidden = !S.notes.length;
+  if (!S.notes.length) return;
+  $("#shift-tabs").innerHTML = S.notes.map((n, i) => `<button role="tab" data-i="${i}">Shift ${esc(n.shift)}</button>`).join("");
   document.querySelectorAll("#shift-tabs button").forEach(b => b.onclick = () => showNote(Number(b.dataset.i)));
-  const withAlerts = notes.findIndex(n => !/No drift alerts|Nothing drifted/i.test(n.note));
-  showNote(withAlerts >= 0 ? withAlerts : 0);
+  if (noteIndex == null) { const k = S.notes.findIndex(n => !/No drift alerts|Nothing drifted/i.test(n.note)); noteIndex = k >= 0 ? k : 0; }
+  showNote(Math.min(noteIndex, S.notes.length - 1));
+}
+function renderAccuracy() {
+  const ev = S.evaluation;
+  $("#acc-card").hidden = !ev?.methods;
+  if (!ev?.methods) return;
+  const m = ev.methods, useSubset = m.llm?.n && ev.llm_subset;
+  const rows = useSubset
+    ? [["Investigation agent", m.llm, true], ["Alarm lookup table", ev.llm_subset.lookup, false]]
+    : [["Investigation (rules)", m.rules, true], ["Alarm lookup table", m.lookup, false]];
+  $("#acc").innerHTML = rows.map(([label, x, agent]) => `<div class="bar${agent ? " agent" : ""}">
+      <div class="row"><span>${esc(label)}</span><span class="num">${int(x.correct)} / ${int(x.n)}</span></div>
+      <span class="track"><span class="fill" style="width:${(100 * x.correct / x.n).toFixed(1)}%"></span></span></div>`).join("") +
+    `<p style="margin: 14px 0 0; font-size: 13px; color: var(--ink-3)">${useSubset ? `Same ${int(m.llm.n)} simulated incidents` : `${int(ev.incidents)} simulated incidents`} with known causes. The lookup table misses every drifting sensor.</p>`;
 }
 
-// ---------- lines
-function renderLines(lines) {
-  $("#lines").innerHTML = lines.map(l => `
-    <div class="row">
-      <span class="id">${esc(l.line_id)}</span>
-      <span class="product">${esc(l.product)}<br><span style="font-size:14px;color:var(--ink-3)">Lot ${esc((l.current_lot || "").split("-").pop())} in progress</span></span>
-      <span class="kv k1"><b>${fmt(l.scrap_rate_15m_pct, 2)}%</b><span>scrap, last 15 min</span></span>
-      <span class="kv k2"><b>${fmt(l.fill_weight_g, 1)} g</b><span>average pack</span></span>
-      <span class="status ${esc(l.status)}">${STATUS_TEXT[l.status] || esc(l.status)}</span>
-    </div>`).join("");
-  $("#sel-line").innerHTML = lines.map(l => `<option>${esc(l.line_id)}</option>`).join("");
+// ---------- incidents
+let current = null, replayTimer = null;
+const seen = new Set();
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+function renderIncidentList(selectedId) {
+  $("#incident-list").innerHTML = `<div class="head"><h2>Incidents</h2><span class="num" style="font-size: 13px; color: var(--ink-3)">${S.incidents.length}</span></div>` +
+    S.incidents.map(i => {
+      const c = causeOf(i), extra = i.alerts.length > 1 ? ` · ${i.alerts.length} alarms` : "";
+      return `<a href="#incidents/${encodeURIComponent(i.id)}" ${i.id === selectedId ? 'aria-current="true"' : ""}>
+        <span class="t">${hm(new Date(i.startMs).toISOString())}</span><span class="w">${esc(incidentTitle(i))}</span>
+        <span class="c">${c ? `<i class="swatch c-${esc(c)}"></i>${esc(CAUSE[c] || c)}` : "Not investigated"}${extra}</span></a>`;
+    }).join("");
 }
 
-// ---------- alerts
-const CAUSE = {burner_fault: "Burner fault", thermocouple_drift: "Thermocouple drift", belt_slowdown: "Belt slowdown",
-               filler_drift: "Filler drift", unclear: "Unclear"};
-let investigations = new Map();   // alert_id -> summary row from /api/investigations
+function stepOf(rec, tool) { return rec.steps.find(s => s.tool === tool)?.result || {}; }
+function tiles(rec) {
+  const q = stepOf(rec, "get_product_quality"), w = stepOf(rec, "get_signal_window"), c = stepOf(rec, "compare_line_signals");
+  const belt = (c.signals || []).find(s => s.signal === "belt_speed_mpm");
+  const b = q.before || {}, d = q.during || {}, out = [];
+  if (rec.signal === "fill_weight_g") {
+    out.push({label: "Mean pack weight (g)", value: `${fmt(b.mean_pack_weight_g, 2)} → ${fmt(d.mean_pack_weight_g, 2)}`, say: `Target ${fmt(q.target_weight_g, 0)} g`, tone: ""});
+    out.push({label: "Underweight per 1,000", value: `${fmt(b.underweight_per_1000)} → ${fmt(d.underweight_per_1000)}`,
+              say: d.underweight_per_1000 > 2 * (b.underweight_per_1000 || 0.5) ? "Up" : "Steady", tone: d.underweight_per_1000 > 2 * (b.underweight_per_1000 || 0.5) ? "hot" : "ok"});
+  } else {
+    const ratio = q.bake_defect_rate_ratio;
+    out.push({label: "Bake defects per 1,000", value: `${fmt(b.bake_defects_per_1000)} → ${fmt(d.bake_defects_per_1000)}`,
+              say: ratio == null ? "" : ratio >= 2 ? `Up ${fmt(ratio)}×` : "Unchanged", tone: ratio >= 2 ? "hot" : "ok"});
+    if (rec.signal === "belt_speed_mpm") out.push({label: "Packs per minute", value: `${fmt(b.packs_per_min)} → ${fmt(d.packs_per_min)}`,
+              say: q.packs_per_min_change_pct <= -5 ? `${q.packs_per_min_change_pct}%` : "Steady", tone: q.packs_per_min_change_pct <= -5 ? "hot" : "ok"});
+    else out.push({label: "Reading noise", value: `${fmt(w.noise_ratio)}×`, say: w.noise_ratio >= 1.5 ? "Noisier than baseline" : "Normal", tone: w.noise_ratio >= 1.5 ? "hot" : "ok"});
+  }
+  if (belt) out.push({label: "Belt speed change (m/min)", value: `${belt.change > 0 ? "+" : ""}${fmt(belt.change, 2)}`,
+                      say: belt.change <= -0.3 ? "Slowed" : "Steady", tone: belt.change <= -0.3 ? "hot" : "ok"});
+  return out.slice(0, 3);
+}
+function sparkline(w) {
+  const sm = w.samples || [];
+  if (sm.length < 2) return "";
+  const W = 760, H = 96, v = sm.map(s => s.deviation ?? 0), lo = Math.min(0, ...v), hi = Math.max(0, ...v), span = hi - lo || 1;
+  const X = i => 4 + i / (v.length - 1) * (W - 8), Y = y => 6 + (1 - (y - lo) / span) * (H - 12);
+  return `<div class="well" style="padding: 14px 16px 10px">
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink-3)"><span>${esc(w.signal_name)}, deviation from setpoint</span><span>${esc(w.unit)}</span></div>
+    <svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(w.signal_name)} deviation every 5 minutes, peak ${esc(fmt(w.peak_deviation))} ${esc(w.unit)}">
+      <line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="rgba(20,20,20,.25)" stroke-dasharray="3 5" vector-effect="non-scaling-stroke"/>
+      <polyline fill="none" stroke="var(--series)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke" points="${v.map((y, i) => `${X(i).toFixed(1)},${Y(y).toFixed(1)}`).join(" ")}"/>
+    </svg>
+    <div class="spark-axis"><span>${esc(sm[0].time)}</span><span>${esc(sm.at(-1).time)}</span></div></div>`;
+}
+const figMark = (text, bad) => noteHtml(String(text || ""), bad).replace(/^<p>|<\/p>$/g, "");
 
-function selectAlert(a, btn) {
-  document.querySelectorAll("#alerts .pick").forEach(x => x.setAttribute("aria-pressed", String(x === btn)));
-  $("#sel-line").value = a.line_id; $("#sel-signal").value = a.signal;
-  drawChart().catch(showError);
+function diagnosisHtml(rec, inc) {
+  const d = rec.diagnosis, bad = rec.unverified || [], review = reviewFor(rec.alert_id, rec.review);
+  const checked = rec.figures_verified === rec.figures_total ? `${rec.figures_total} of ${rec.figures_total} figures checked` : `${rec.figures_total - rec.figures_verified} of ${rec.figures_total} figures not found`;
+  const others = inc.alerts.slice(1).map(a => `${SIGNAL[a.signal]?.[0].toLowerCase() || a.signal} from ${hm(a.start_minute)}`);
+  let rv;
+  if (!review) {
+    rv = `<div class="review" id="review"><button class="btn primary" id="rv-accept">Accept</button><button class="btn" id="rv-override">Override</button>
+      <span class="meta">${d.ruled_out?.length ? `Ruled out: ${d.ruled_out.map(r => esc((CAUSE[r.cause] || r.cause).toLowerCase())).join(", ")}` : ""}</span></div>`;
+  } else {
+    const gt = rec.ground_truth, right = gt && gt.cause === review.root_cause, agent = gt && gt.cause === d.root_cause;
+    rv = `<div class="review"><span>${review.decision === "accept" ? "You accepted this diagnosis." : `You overrode it: <b>${esc(CAUSE[review.root_cause] || review.root_cause)}</b>${review.note ? ` (“${esc(review.note)}”)` : ""}.`}</span>
+      <button class="link" id="rv-undo">Change answer</button></div>` +
+      (gt ? `<div class="verdict ${right ? "" : "wrong"}">Simulator ground truth: <b>${esc(CAUSE[gt.cause] || gt.cause)}</b> (fault ${esc(gt.fault_id)}). The agent was ${agent ? "right" : "wrong"}${review.decision === "override" ? `; your override was ${right ? "right" : "wrong"}` : ""}.</div>` : "");
+  }
+  return `<section class="card diag" aria-label="Diagnosis">
+      <div class="diag-top"><span class="kicker">Diagnosis</span><span class="conf ${esc(d.confidence)}">${esc(d.confidence)} confidence</span>
+        <span style="margin-left:auto;font-size:13px;color:${bad.length ? "var(--bad)" : "var(--accent)"}">${checked}</span></div>
+      <div><div class="cause-name"><i class="swatch c-${esc(d.root_cause)}"></i>${esc(CAUSE[d.root_cause] || d.root_cause)}</div>
+        <p class="summary" style="margin-top:6px">${figMark(d.summary, bad)}</p></div>
+      <div class="grid-3">${tiles(rec).map(t => `<div class="well tile"><span>${esc(t.label)}</span><b>${esc(t.value)}</b><span class="say ${t.tone}">${esc(t.say)}</span></div>`).join("")}</div>
+      ${sparkline(stepOf(rec, "get_signal_window"))}
+      <div><div class="kicker" style="margin-bottom:8px">Do next</div><ol class="actions">${(d.actions || []).map(a => `<li><span>${figMark(a, bad)}</span></li>`).join("")}</ol></div>
+      ${others.length ? `<p class="also" style="margin:0">Also alarmed during this incident: ${esc(others.join(", "))}.</p>` : ""}
+      ${rv}
+    </section>`;
 }
 
-function renderAlerts(alerts) {
-  if (!alerts.length) { $("#alerts").innerHTML = `<li class="empty">No drift alerts in this period.</li>`; return; }
-  $("#alerts").innerHTML = alerts.map((a, i) => {
-    const [name, unit] = SIGNAL[a.signal] || [a.signal, ""];
-    const lag = Math.round((Date.parse(a.detected_at) - Date.parse(a.start_minute)) / 60000);
-    const lots = a.affected_lots.map(x => x.split("-").pop()).join(", ");
-    const inv = investigations.get(a.alert_id);
-    const review = inv && reviewFor(a.alert_id, inv.review);
-    const cause = inv ? (review ? review.root_cause : inv.root_cause) : null;
-    return `<li><button class="pick" data-i="${i}" aria-pressed="false">
-      <span class="when">${hm(a.start_minute)}–${hm(a.end_minute)}</span>
-      <span class="what">${esc(a.line_id)} ${esc(name.toLowerCase())} ran ${esc(a.direction)}, up to ${fmt(a.peak_abs_dev, 1)} ${unit} off setpoint${a.status === "open" ? " (still open)" : ""}</span>
-      <span class="detail">Flagged ${lag} min after it started · lots ${esc(lots)} made during it · ${int(a.units_in_window)} packs, ${int(a.rejects_in_window)} rejected</span>
-    </button>${inv ? `<span class="side"><span class="cause">${review ? (review.decision === "accept" ? "Accepted" : "Overridden") : "Probable cause"}: <b>${esc(CAUSE[cause] || cause)}</b></span>
-      <button class="btn" data-inv="${esc(a.alert_id)}" data-i="${i}">Investigate</button></span>` : ""}</li>`;
-  }).join("");
-  document.querySelectorAll("#alerts .pick").forEach(b => b.onclick = () => selectAlert(alerts[Number(b.dataset.i)], b));
-  document.querySelectorAll("#alerts [data-inv]").forEach(b => b.onclick = () => {
-    const a = alerts[Number(b.dataset.i)];
-    selectAlert(a, b.closest("li").querySelector(".pick"));
-    openInvestigation(a.alert_id, b).catch(showError);
+const TOOL_LABEL = {get_alert: "Alert", get_signal_window: "Signal", compare_line_signals: "Whole line", get_product_quality: "Product", get_related_alerts: "Related"};
+const TOOL_THOUGHT = {get_alert: "Read the alert", get_signal_window: "Look at the signal around it", compare_line_signals: "Compare every signal on the line",
+  get_product_quality: "Check what came off the line", get_related_alerts: "Look for related alerts"};
+const signed = (v, d) => { if (v == null) return "–"; const r = Number(Number(v).toFixed(d)) || 0; return (r > 0 ? "+" : "") + fmt(r, d); };
+const dp = u => u === "°C" || u === "%" ? 1 : 2;
+function foundHtml(step) {
+  const r = step.result || {};
+  if (r.error) return `<span style="color:var(--bad)">${esc(r.error)}</span>`;
+  let body = "";
+  if (step.tool === "get_alert") {
+    body = `${esc(r.line_id)} ${esc((r.signal_name || "").toLowerCase())} ran ${esc(r.direction)} from ${esc(r.started)} to ${esc(r.ended)}, up to ${fmt(r.peak_smoothed_deviation, dp(r.unit))} ${esc(r.unit)} off setpoint. ${int(r.packs_in_window)} packs, lots ${esc((r.lot_numbers || []).join(", "))}.`;
+  } else if (step.tool === "get_signal_window") {
+    body = `${r.onset === "sudden" ? "Sudden" : "Gradual"} change, peak ${signed(r.peak_deviation, dp(r.unit))} ${esc(r.unit)} at ${esc(r.peak_at)}. Reading noise ${fmt(r.noise_ratio)}× the baseline.`;
+  } else if (step.tool === "compare_line_signals") {
+    body = `<table><tr><th>Signal</th><th class="r">Before</th><th class="r">During</th><th class="r">Change</th></tr>` + (r.signals || []).map(x =>
+      `<tr class="${Math.abs(x.change || 0) >= 0.5 * (x.alarm_threshold || Infinity) ? "moved" : ""}"><td>${esc(x.signal_name)}</td><td class="r">${signed(x.mean_deviation_before, dp(x.unit))}</td><td class="r">${signed(x.mean_deviation_during, dp(x.unit))}</td><td class="r">${signed(x.change, dp(x.unit))} ${esc(x.unit)}</td></tr>`).join("") + "</table>";
+  } else if (step.tool === "get_product_quality") {
+    const b = r.before || {}, d = r.during || {};
+    const row = (k, l, n) => `<tr><td>${l}</td><td class="r">${fmt(b[k], n)}</td><td class="r">${fmt(d[k], n)}</td></tr>`;
+    body = `<table><tr><th></th><th class="r">Baseline</th><th class="r">During</th></tr>${row("packs_per_min", "Packs per minute", 1)}${row("bake_defects_per_1000", "Bake defects per 1,000", 1)}${row("underweight_per_1000", "Underweight per 1,000", 1)}${row("mean_pack_weight_g", "Mean pack weight (g)", 2)}</table>`;
+  } else if (step.tool === "get_related_alerts") {
+    const list = (t, xs) => xs?.length ? `<div>${t}: ${xs.map(x => `${esc(x.line_id)} ${esc(x.signal_name.toLowerCase())} from ${esc(x.started)}`).join("; ")}</div>` : "";
+    body = list("Same line", r.same_line_nearby) + list("Other line, same time", r.other_lines_same_time) + list("Earlier on this signal", r.earlier_same_signal) || "No related alerts.";
+  }
+  return body + `<details><summary>Raw tool result</summary><pre>${esc(JSON.stringify(r, null, 1))}</pre></details>`;
+}
+function traceHtml(rec) {
+  return `<section class="card" style="padding: 18px 20px" aria-label="How the agent got there">
+    <div class="trace-bar"><span style="font-size:14px;color:var(--ink-2)">How the agent got there</span>
+      <span class="chips">${rec.steps.map((s, i) => `${i ? "<i></i>" : ""}<span>${esc(TOOL_LABEL[s.tool] || s.tool)}</span>`).join("")}</span>
+      <button class="link" id="replay" style="margin-left:auto">Replay ${rec.steps.length} steps</button></div>
+    <ol class="steps" id="steps" hidden>${rec.steps.map((s, i) => `<li class="step done"><span class="sdot" aria-hidden="true"></span>
+      <p>${esc(s.thought || TOOL_THOUGHT[s.tool] || s.tool)}</p><code>${esc(s.tool)}</code><div class="found">${foundHtml(s)}</div></li>`).join("")}</ol>
+    <p style="margin:12px 0 0;font-size:13px;color:var(--ink-3)">${rec.writer === "llm" ? `Investigated by ${esc(rec.model)}` : "Investigated by the deterministic investigator (no LLM key configured)"}${rec.retried ? ", corrected once after the figure check" : ""}.</p>
+  </section>`;
+}
+function replay() {
+  const box = $("#steps"), items = [...box.querySelectorAll(".step")];
+  clearTimeout(replayTimer);
+  box.hidden = false;
+  if (reduceMotion.matches) { items.forEach(li => li.hidden = false); return; }
+  items.forEach(li => { li.hidden = true; li.classList.remove("running", "reveal"); li.classList.add("done"); });
+  let i = 0;
+  const next = () => {
+    if (i > 0) { items[i - 1].classList.remove("running"); items[i - 1].classList.add("done"); }
+    if (i === items.length) return;
+    const li = items[i];
+    li.hidden = false; li.classList.remove("done"); li.classList.add("reveal", "running");
+    i += 1;
+    replayTimer = setTimeout(next, 800);
+  };
+  next();
+}
+async function saveReview(id, body, diagnosed) {
+  if (STATIC) {
+    const r = {...body, root_cause: body.decision === "accept" ? diagnosed : body.root_cause, at: new Date().toISOString()};
+    try { localStorage.setItem(reviewKey(id), JSON.stringify(r)); } catch { /* private mode: this view only */ }
+    return r;
+  }
+  const res = await fetch(`/api/investigations/${encodeURIComponent(id)}/review`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  if (!res.ok) throw new Error(`Review not saved: ${(await res.json().catch(() => ({}))).error || res.status}`);
+  return res.json();
+}
+function wireReview(rec, inc) {
+  const id = rec.alert_id, diagnosed = rec.diagnosis.root_cause;
+  const done = async body => {
+    const r = await saveReview(id, body, diagnosed);
+    rec.review = r; const row = S.invs.get(id); if (row) row.review = r;
+    renderIncident(inc.id, false);
+  };
+  $("#rv-accept")?.addEventListener("click", () => done({decision: "accept"}).catch(showError));
+  $("#rv-override")?.addEventListener("click", () => {
+    $("#review").innerHTML = `<select id="rv-cause" aria-label="Root cause">${Object.entries(CAUSE).filter(([k]) => k !== diagnosed).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
+      <input id="rv-note" maxlength="500" placeholder="What you found (optional)" aria-label="Note"><button class="btn primary" id="rv-save">Save</button>`;
+    $("#rv-cause").focus();
+    $("#rv-save").onclick = () => done({decision: "override", root_cause: $("#rv-cause").value, note: $("#rv-note").value || null}).catch(showError);
+  });
+  $("#rv-undo")?.addEventListener("click", () => {
+    if (STATIC) { try { localStorage.removeItem(reviewKey(id)); } catch {} }
+    rec.review = null; renderIncident(inc.id, false);
   });
 }
+async function renderIncident(id, focusTop = true) {
+  const inc = S.incidents.find(i => i.id === id) || S.incidents[0];
+  renderIncidentList(inc?.id);
+  if (!inc) { $("#detail").innerHTML = `<p class="empty">No incidents in this period.</p>`; return; }
+  const a = inc.primary, lots = [...new Set(inc.alerts.flatMap(x => x.affected_lots))].sort().map(x => x.split("-").pop());
+  const head = `<header><a class="back" href="#incidents">← All incidents</a><div class="kicker num">${hm(a.start_minute)}–${hm(new Date(inc.endMs).toISOString())} · lots ${esc(lots.join(", "))} · ${int(a.units_in_window)} packs</div>
+    <h1 class="h1" style="margin-top:8px">Why did ${esc(a.line_id)} ${esc((SIGNAL[a.signal]?.[0] || a.signal).toLowerCase())} alarm?</h1></header>`;
+  if (!S.invs.has(inc.id)) { $("#detail").innerHTML = head + `<p class="empty">This alert has not been investigated yet. Run scripts/investigate_alerts.py.</p>`; return; }
+  let rec = details.get(inc.id);
+  if (!rec) {
+    $("#detail").innerHTML = head + `<p class="empty">Loading the investigation…</p>`;
+    rec = await get(`/api/investigations/${encodeURIComponent(inc.id)}`);
+    details.set(inc.id, rec);
+  }
+  current = rec;
+  $("#detail").innerHTML = head + diagnosisHtml(rec, inc) + traceHtml(rec);
+  $("#replay").onclick = replay;
+  wireReview(rec, inc);
+  if (focusTop) window.scrollTo({top: 0});
+  seen.add(inc.id);
+}
 
-// ---------- shifts
-function renderShifts(rows) {
+// ---------- shifts, signals, quality
+function renderShifts() {
   const order = {A: 0, B: 1, C: 2};
-  rows = [...rows].sort((a, b) => a.shift_date.localeCompare(b.shift_date) || order[a.shift] - order[b.shift] || a.line_id.localeCompare(b.line_id));
-  $("#shifts").innerHTML = `<tr><th>Shift</th><th>Line</th><th class="num">Packs</th><th class="num">Scrap</th>
-      <th class="num">Giveaway</th><th class="num">Alerts</th>
-      <th class="num more">Underweight</th><th class="num more">Bake defect</th><th class="num more">Avg pack</th><th class="num more">Over label</th></tr>` +
-    rows.map(k => `<tr><td>${esc(k.shift)} <span style="color:var(--ink-3)">${SHIFT_HOURS[k.shift] || ""}, ${esc(k.shift_date)}</span></td>
-      <td>${esc(k.line_id)}</td><td class="num">${int(k.units)}</td><td class="num">${fmt(k.scrap_rate_pct, 2)}%</td>
-      <td class="num">CAD ${fmt(k.giveaway_cost_cad, 2)}</td><td class="num">${int(k.alerts)}</td>
-      <td class="num more">${int(k.rejects_underweight)}</td><td class="num more">${int(k.rejects_bake_defect)}</td>
-      <td class="num more">${fmt(k.avg_accepted_weight_g, 2)} g</td><td class="num more">${fmt(k.giveaway_g_per_pack, 2)} g</td></tr>`).join("");
+  const rows = [...S.shifts].sort((a, b) => a.shift_date.localeCompare(b.shift_date) || order[a.shift] - order[b.shift] || a.line_id.localeCompare(b.line_id));
+  $("#shifts").innerHTML = `<tr><th>Shift</th><th>Line</th><th class="r">Packs</th><th class="r">Scrap</th><th class="r">Underweight</th><th class="r">Bake defect</th><th class="r">Over label</th><th class="r">Giveaway</th><th class="r">Alerts</th></tr>` +
+    rows.map(k => `<tr><td>${esc(k.shift)} <span style="color:var(--ink-3)">${SHIFT_HOURS[k.shift] || ""} · ${esc(k.shift_date)}</span></td><td>${esc(k.line_id)}</td>
+      <td class="r">${int(k.units)}</td><td class="r">${fmt(k.scrap_rate_pct, 2)}%</td><td class="r">${int(k.rejects_underweight)}</td><td class="r">${int(k.rejects_bake_defect)}</td>
+      <td class="r">${fmt(k.giveaway_g_per_pack, 2)} g</td><td class="r">CAD ${fmt(k.giveaway_cost_cad, 2)}</td><td class="r">${int(k.alerts)}</td></tr>`).join("");
+  const sel = $("#sel-line"), keep = sel.value;
+  sel.innerHTML = S.lines.map(l => `<option>${esc(l.line_id)}</option>`).join("");
+  if (keep) sel.value = keep;
 }
-$("#toggle-more").onclick = e => {
-  const on = $("#shift-box").classList.toggle("show-more");
-  e.target.setAttribute("aria-expanded", String(on));
-  e.target.textContent = on ? "Hide reject and weight detail" : "Show reject and weight detail";
-};
-
-function renderDq(rows) {
-  const total = rows.reduce((s, r) => s + r.records, 0);
-  $("#dq").textContent = `${int(total)} malformed sensor and checkweigher records were set aside by data-quality checks ` +
-    `(${rows.map(r => `${int(r.records)} ${r.rule.replaceAll("_", " ")}`).join(", ")}). None reached these numbers. ` +
-    "Giveaway is accepted weight above the 90 g label, priced at an illustrative CAD 2.50/kg.";
+function renderDq() {
+  const total = S.dq.reduce((s, r) => s + r.records, 0);
+  $("#dq").innerHTML = `<tr><th>Rule</th><th>Record type</th><th class="r">Records</th></tr>` +
+    S.dq.map(r => `<tr><td>${esc(r.rule.replaceAll("_", " "))}</td><td>${esc(r.event_type)}</td><td class="r">${int(r.records)}</td></tr>`).join("") +
+    `<tr><td><b>Total</b></td><td></td><td class="r"><b>${int(total)}</b></td></tr>`;
 }
-
-// ---------- chart
 async function drawChart() {
+  if ($("[data-view=shifts]").hidden) return;
   const line = $("#sel-line").value, signal = $("#sel-signal").value, win = $("#sel-window").value;
+  if (!line) return;
   const [name, unit] = SIGNAL[signal];
   $("#chart-title").textContent = `${line} ${name.toLowerCase()}`;
   const rows = await get(`/api/signals/${line}/${signal}?minutes=${win}`);
   const host = $("#chart"), tip = $("#tip");
   host.querySelector("svg")?.remove();
   if (!rows.length) { $("#chart-sub").textContent = "No data yet."; return; }
-  const sp = rows[0].setpoint, thr = rows[0].threshold;
-  const overN = rows.filter(r => r.over).length;
-  $("#chart-sub").textContent = `Setpoint ${fmt(sp, 1)} ${unit}. An alert fires after 3 minutes more than ${fmt(thr, 1)} ${unit} off (smoothed). ` +
-    (overN ? `${overN} minutes drifting in this window.` : "No drift in this window.");
-
-  const W = host.clientWidth || 800, H = 240, m = {l: 44, r: 8, t: 10, b: 26};
+  const sp = rows[0].setpoint, thr = rows[0].threshold, overN = rows.filter(r => r.over).length;
+  $("#chart-sub").textContent = `Setpoint ${fmt(sp, 1)} ${unit}. Alerts after 3 minutes more than ${fmt(thr, 1)} ${unit} off. ${overN ? `${overN} minutes drifting.` : "No drift."}`;
+  const W = host.clientWidth || 800, H = 260, m = {l: 44, r: 8, t: 10, b: 26};
   const t = rows.map(r => Date.parse(r.minute)), v = rows.map(r => r.mean_value);
-  const rawLo = Math.min(...v, sp - thr), rawHi = Math.max(...v, sp + thr);
-  const span = rawHi - rawLo || 1, mag = 10 ** Math.floor(Math.log10(span / 4));
+  const rawLo = Math.min(...v, sp - thr), rawHi = Math.max(...v, sp + thr), span = rawHi - rawLo || 1, mag = 10 ** Math.floor(Math.log10(span / 4));
   const step = [1, 2, 2.5, 5, 10].map(f => f * mag).find(st => span / st <= 5);
   const lo = Math.floor(rawLo / step) * step, hi = Math.ceil(rawHi / step) * step;
-  const X = x => m.l + (x - t[0]) / Math.max(1, t.at(-1) - t[0]) * (W - m.l - m.r);
-  const Y = y => m.t + (1 - (y - lo) / (hi - lo)) * (H - m.t - m.b);
+  const X = x => m.l + (x - t[0]) / Math.max(1, t.at(-1) - t[0]) * (W - m.l - m.r), Y = y => m.t + (1 - (y - lo) / (hi - lo)) * (H - m.t - m.b);
   const yt = []; for (let y = lo; y <= hi + step / 2; y += step) yt.push(y);
   const hours = (t.at(-1) - t[0]) / 36e5, every = (hours > 12 ? 4 : hours > 4 ? 2 : hours > 2 ? 1 : 0.5) * 36e5 * (W < 500 ? 2 : 1);
   const xt = []; for (let x = Math.ceil(t[0] / every) * every; x <= t.at(-1); x += every) xt.push(x);
-  const path = rows.map((r, i) => `${i ? "L" : "M"}${X(t[i]).toFixed(1)},${Y(r.mean_value).toFixed(1)}`).join("");
-  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(line)} ${esc(name)} per-minute average over time">
-    ${yt.map(y => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(y)}" y2="${Y(y)}" stroke="var(--grid)"/>
-      <text x="${m.l - 8}" y="${Y(y) + 4}" text-anchor="end" font-size="12" fill="var(--ink-3)">${fmt(y, step < 1 ? 1 : 0)}</text>`).join("")}
-    ${xt.map(x => `<text x="${X(x)}" y="${H - 6}" text-anchor="middle" font-size="12" fill="var(--ink-3)">${hm(new Date(x).toISOString())}</text>`).join("")}
-    <rect x="${m.l}" width="${W - m.l - m.r}" y="${Y(sp + thr)}" height="${Y(sp - thr) - Y(sp + thr)}" fill="var(--band)"/>
-    <line x1="${m.l}" x2="${W - m.r}" y1="${Y(sp)}" y2="${Y(sp)}" stroke="var(--ink-3)" stroke-dasharray="4 4"/>
-    <path d="${path}" fill="none" stroke="var(--series)" stroke-width="2" stroke-linejoin="round"/>
-    ${rows.map((r, i) => r.over ? `<circle cx="${X(t[i])}" cy="${Y(r.mean_value)}" r="3" fill="var(--bad)" stroke="var(--surface)" stroke-width="1"/>` : "").join("")}
-    <line id="xh" y1="${m.t}" y2="${H - m.b}" stroke="var(--ink-3)" visibility="hidden"/>
-    <rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent" id="hit"/>
-  </svg>`;
-  host.insertAdjacentHTML("afterbegin", svg);
+  host.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(line)} ${esc(name)} per-minute average">
+    ${yt.map(y => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(y)}" y2="${Y(y)}" stroke="rgba(20,20,20,.08)"/><text x="${m.l - 8}" y="${Y(y) + 4}" text-anchor="end" font-size="12" fill="#5A5A5A">${fmt(y, step < 1 ? 1 : 0)}</text>`).join("")}
+    ${xt.map(x => `<text x="${X(x)}" y="${H - 6}" text-anchor="middle" font-size="12" fill="#5A5A5A">${hm(new Date(x).toISOString())}</text>`).join("")}
+    <rect x="${m.l}" width="${W - m.l - m.r}" y="${Y(sp + thr)}" height="${Y(sp - thr) - Y(sp + thr)}" fill="rgba(30,107,69,.07)"/>
+    <line x1="${m.l}" x2="${W - m.r}" y1="${Y(sp)}" y2="${Y(sp)}" stroke="#5A5A5A" stroke-dasharray="4 4"/>
+    <path d="${rows.map((r, i) => `${i ? "L" : "M"}${X(t[i]).toFixed(1)},${Y(r.mean_value).toFixed(1)}`).join("")}" fill="none" stroke="var(--series)" stroke-width="2" stroke-linejoin="round"/>
+    ${rows.map((r, i) => r.over ? `<circle cx="${X(t[i])}" cy="${Y(r.mean_value)}" r="3" fill="var(--bad)"/>` : "").join("")}
+    <line id="xh" y1="${m.t}" y2="${H - m.b}" stroke="#5A5A5A" visibility="hidden"/><rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent" id="hit"/></svg>`);
   const s = host.querySelector("svg"), xh = s.querySelector("#xh");
   s.querySelector("#hit").onmousemove = e => {
     const box = s.getBoundingClientRect(), px = (e.clientX - box.left) * (W / box.width);
-    let i = 0, best = Infinity;
-    t.forEach((x, k) => { const d = Math.abs(X(x) - px); if (d < best) { best = d; i = k; } });
-    const r = rows[i];
+    let i = 0, best = Infinity; t.forEach((x, k) => { const d = Math.abs(X(x) - px); if (d < best) { best = d; i = k; } });
     xh.setAttribute("x1", X(t[i])); xh.setAttribute("x2", X(t[i])); xh.setAttribute("visibility", "visible");
-    tip.style.display = "block";
-    tip.innerHTML = `<b>${hm(r.minute)} UTC</b><br>${fmt(r.mean_value, 2)} ${unit}${r.over ? ", drifting" : ""}`;
-    const left = Math.min((X(t[i]) / W) * box.width + 12, box.width - tip.offsetWidth - 4);
-    tip.style.left = left + "px"; tip.style.top = "8px";
+    tip.style.display = "block"; tip.innerHTML = `<b>${hm(rows[i].minute)} UTC</b><br>${fmt(rows[i].mean_value, 2)} ${unit}${rows[i].over ? ", drifting" : ""}`;
+    tip.style.left = Math.min((X(t[i]) / W) * box.width + 12, box.width - tip.offsetWidth - 4) + "px"; tip.style.top = "8px";
   };
   s.querySelector("#hit").onmouseleave = () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); };
-}
-
-// ---------- investigation agent: replay a recorded run, then accept or override
-const TOOL_LABEL = {get_alert: "Read the alert", get_signal_window: "Look at the signal around it",
-  compare_line_signals: "Compare every signal on the line", get_product_quality: "Check what came off the line",
-  get_related_alerts: "Look for related alerts"};
-const seen = new Set();   // replays already watched this visit open fully, without the animation
-let replayTimer = null, lastOpener = null, current = null;
-const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
-
-function argText(t, a) {
-  if (t === "get_alert" || t === "get_related_alerts") return a.alert_id || "";
-  const w = a.start && a.end ? ` ${hm(a.start)}–${hm(a.end)}` : "";
-  return [a.line_id, a.signal].filter(Boolean).join(" ") + w;
-}
-const signed = (v, d) => {
-  if (v == null) return "–";
-  const r = Number(Number(v).toFixed(d)) || 0;   // no "-0.0"
-  return (r > 0 ? "+" : "") + fmt(r, d);
-};
-const dp = u => u === "°C" || u === "%" ? 1 : 2;
-
-function sparkline(samples, unit) {
-  if (!samples?.length) return "";
-  const W = 480, H = 56, v = samples.map(s => s.deviation ?? 0), lo = Math.min(0, ...v), hi = Math.max(0, ...v), span = hi - lo || 1;
-  const X = i => 4 + i / Math.max(1, v.length - 1) * (W - 8), Y = y => 4 + (1 - (y - lo) / span) * (H - 16);
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Deviation from setpoint every 5 minutes">
-    <line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--ink-3)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
-    <path d="${v.map((y, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(y).toFixed(1)}`).join("")}" fill="none" stroke="var(--series)" stroke-width="2" vector-effect="non-scaling-stroke"/>
-    <text x="4" y="${H - 2}" font-size="11" fill="var(--ink-3)">${esc(samples[0].time)}</text>
-    <text x="${W - 4}" y="${H - 2}" font-size="11" text-anchor="end" fill="var(--ink-3)">${esc(samples.at(-1).time)}</text></svg>`;
-}
-
-function foundHtml(step) {
-  const r = step.result || {};
-  if (r.error) return `<span style="color:var(--bad)">${esc(r.error)}</span>`;
-  let body = "";
-  if (step.tool === "get_alert") {
-    body = `${esc(r.line_id)} ${esc((r.signal_name || "").toLowerCase())} ran ${esc(r.direction)} from ${esc(r.started)} to ${esc(r.ended)},
-      up to ${fmt(r.peak_smoothed_deviation, dp(r.unit))} ${esc(r.unit)} off setpoint (smoothed). ${int(r.packs_in_window)} packs and lots
-      ${esc((r.lot_numbers || []).join(", "))} were made during it.`;
-  } else if (step.tool === "get_signal_window") {
-    body = `${r.onset === "sudden" ? "Sudden" : "Gradual"} change: ${signed(r.mean_deviation_before, dp(r.unit))} ${esc(r.unit)} in the baseline hour,
-      ${signed(r.mean_deviation_during, dp(r.unit))} during the alert, peak ${signed(r.peak_deviation, dp(r.unit))} at ${esc(r.peak_at)}.
-      Reading noise <b>${fmt(r.noise_ratio, 1)}×</b> the baseline.${sparkline(r.samples, r.unit)}`;
-  } else if (step.tool === "compare_line_signals") {
-    body = `<table><tr><th>Signal</th><th class="num">Before</th><th class="num">During</th><th class="num">Change</th></tr>` +
-      (r.signals || []).map(x => {
-        const moved = Math.abs(x.change || 0) >= 0.5 * (x.alarm_threshold || Infinity);
-        return `<tr class="${moved ? "moved" : ""}"><td>${esc(x.signal_name)}</td><td class="num">${signed(x.mean_deviation_before, dp(x.unit))}</td>
-          <td class="num">${signed(x.mean_deviation_during, dp(x.unit))}</td><td class="num">${signed(x.change, dp(x.unit))} ${esc(x.unit)}</td></tr>`;
-      }).join("") + `</table><div style="color:var(--ink-3);font-size:13px">Deviation from setpoint; baseline ${esc(r.baseline)}. Bold: moved by half its alarm limit or more.</div>`;
-  } else if (step.tool === "get_product_quality") {
-    const b = r.before || {}, d = r.during || {};
-    const row = (k, label, dd) => `<tr><td>${label}</td><td class="num">${fmt(b[k], dd)}</td><td class="num">${fmt(d[k], dd)}</td></tr>`;
-    body = `<table><tr><th></th><th class="num">Baseline</th><th class="num">During</th></tr>
-      ${row("packs_per_min", "Packs per minute", 1)}${row("bake_defects_per_1000", "Bake defects per 1,000", 1)}
-      ${row("underweight_per_1000", "Underweight per 1,000", 1)}${row("mean_pack_weight_g", "Mean pack weight (g)", 2)}</table>`;
-  } else if (step.tool === "get_related_alerts") {
-    const list = (title, xs) => xs?.length ? `<div>${title}: ${xs.map(x => `${esc(x.line_id)} ${esc(x.signal_name.toLowerCase())} ${esc(x.direction)} from ${esc(x.started)}`).join("; ")}</div>` : "";
-    body = list("Same line", r.same_line_nearby) + list("Other line, same time", r.other_lines_same_time) +
-      list("Earlier on this signal", r.earlier_same_signal) || "No related alerts.";
-  }
-  return body + `<details><summary>Raw tool result</summary><pre>${esc(JSON.stringify(r, null, 1))}</pre></details>`;
-}
-
-function stepHtml(step, i) {
-  return `<li class="step" data-step="${i}"><span class="dot" aria-hidden="true"></span>
-    <p class="thought">${esc(step.thought || TOOL_LABEL[step.tool] || step.tool)}</p>
-    <code class="call">${esc(step.tool)}(${esc(argText(step.tool, step.args || {}))})</code>
-    <div class="wait">Checking…</div><div class="found">${foundHtml(step)}</div></li>`;
-}
-
-// Figures in the diagnosis get the same dotted underline as the handover note when they checked out.
-const figMark = (text, bad) => noteHtml(text, bad).replace(/^<p>|<\/p>$/g, "");
-
-function reviewKey(id) { return `linepulse.review.${id}`; }
-function reviewFor(id, serverReview) {
-  if (!STATIC) return serverReview || null;
-  try { return JSON.parse(localStorage.getItem(reviewKey(id)) || "null"); } catch { return null; }
-}
-async function saveReview(id, body, diagnosed) {
-  if (STATIC) {
-    const r = {...body, root_cause: body.decision === "accept" ? diagnosed : body.root_cause, at: new Date().toISOString()};
-    try { localStorage.setItem(reviewKey(id), JSON.stringify(r)); } catch { /* private mode: keep it for this view only */ }
-    return r;
-  }
-  const res = await fetch(`/api/investigations/${encodeURIComponent(id)}/review`,
-    {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
-  if (!res.ok) throw new Error(`Review not saved: ${(await res.json().catch(() => ({}))).error || res.status}`);
-  return res.json();
-}
-
-function diagHtml(rec, review) {
-  const d = rec.diagnosis, bad = rec.unverified || [];
-  const by = rec.writer === "llm" ? `Investigated by ${esc(rec.model)}` : "Investigated by the deterministic investigator (no LLM key configured)";
-  const checked = rec.figures_verified === rec.figures_total ? `all ${rec.figures_total} figures checked against the tool results`
-    : `${rec.figures_total - rec.figures_verified} of ${rec.figures_total} figures not found in the tool results`;
-  let rv;
-  if (!review) {
-    rv = `<div class="review" id="review"><span class="q">Do you agree? Your answer is kept with the investigation${STATIC ? " (in this browser)" : ""}.</span>
-      <button class="btn primary" id="rv-accept">Accept</button><button class="btn" id="rv-override">Override…</button></div>`;
-  } else {
-    const gt = rec.ground_truth;
-    const right = gt && gt.cause === review.root_cause, agent = gt && gt.cause === d.root_cause;
-    rv = `<div class="review"><span class="q">${review.decision === "accept" ? "You accepted this diagnosis." :
-        `You overrode it: <b>${esc(CAUSE[review.root_cause] || review.root_cause)}</b>${review.note ? ` (“${esc(review.note)}”)` : ""}.`}</span>
-        <button class="linkish" id="rv-undo">Change answer</button></div>` +
-      (gt ? `<div class="verdict ${right ? "" : "wrong"}">Simulator ground truth: <b>${esc(CAUSE[gt.cause] || gt.cause)}</b> (fault ${esc(gt.fault_id)}).
-        The agent was ${agent ? "right" : "wrong"}${review.decision === "override" ? `, and your override was ${right ? "right" : "wrong"}` : ""}.</div>` : "");
-  }
-  return `<div class="diag-k">Diagnosis</div>
-    <div class="diag-cause"><strong>${esc(CAUSE[d.root_cause] || d.root_cause)}</strong><span class="conf ${esc(d.confidence)}">${esc(d.confidence)} confidence</span></div>
-    <p>${figMark(d.summary, bad)}</p>
-    <h3>Evidence</h3><ul>${(d.evidence || []).map(e => `<li>${figMark(e, bad)}</li>`).join("")}</ul>
-    ${d.ruled_out?.length ? `<h3>Ruled out</h3><ul>${d.ruled_out.map(r => `<li><b>${esc(CAUSE[r.cause] || r.cause)}</b>: ${figMark(r.why, bad)}</li>`).join("")}</ul>` : ""}
-    <h3>Recommended actions</h3><ol>${(d.actions || []).map(a => `<li>${figMark(a, bad)}</li>`).join("")}</ol>
-    <div class="meta">${by} through ${rec.steps.length} tool calls; ${checked}${rec.retried ? ", corrected once after the check" : ""}.</div>${rv}`;
-}
-
-function renderDiag(rec, animate) {
-  const host = $("#diag-host");
-  host.innerHTML = `<div class="diag${animate ? " enter" : ""}">${diagHtml(rec, reviewFor(rec.alert_id, rec.review))}</div>`;
-  const id = rec.alert_id, diagnosed = rec.diagnosis.root_cause;
-  const done = async body => {
-    const r = await saveReview(id, body, diagnosed);
-    rec.review = r;
-    const row = investigations.get(id); if (row) row.review = r;
-    renderDiag(rec, false);
-    if (lastAlerts) renderAlerts(lastAlerts);
-  };
-  $("#rv-accept")?.addEventListener("click", () => done({decision: "accept"}).catch(showError));
-  $("#rv-override")?.addEventListener("click", () => {
-    $("#review").innerHTML = `<span class="q">What was the cause?</span>
-      <select id="rv-cause" aria-label="Root cause">${Object.entries(CAUSE).filter(([k]) => k !== diagnosed)
-        .map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
-      <input id="rv-note" maxlength="500" placeholder="What you found (optional)" aria-label="Note">
-      <button class="btn primary" id="rv-save">Save</button>`;
-    $("#rv-cause").focus();
-    $("#rv-save").onclick = () => done({decision: "override", root_cause: $("#rv-cause").value, note: $("#rv-note").value || null}).catch(showError);
-  });
-  $("#rv-undo")?.addEventListener("click", () => {
-    if (STATIC) { try { localStorage.removeItem(reviewKey(id)); } catch {} }
-    rec.review = null; renderDiag(rec, false);
-    if (!STATIC) $("#rv-accept")?.focus();
-  });
-}
-
-function finishReplay(rec, animate) {
-  clearTimeout(replayTimer);
-  document.querySelectorAll("#steps .step").forEach(li => { li.classList.remove("running"); li.classList.add("done"); li.hidden = false; });
-  $("#replay-skip").hidden = true;
-  $("#replay-status").textContent = `${rec.steps.length} checks, then a diagnosis.` + (rec.writer === "llm" ? "" : " Recorded run, replayed.");
-  renderDiag(rec, animate);
-  seen.add(rec.alert_id);
-}
-
-function replay(rec) {
-  const items = [...document.querySelectorAll("#steps .step")];
-  items.forEach(li => li.hidden = true);
-  $("#replay-skip").hidden = false;
-  let i = 0;
-  const next = () => {
-    if (i > 0) { items[i - 1].classList.remove("running"); items[i - 1].classList.add("done"); }
-    if (i === items.length) { finishReplay(rec, true); return; }
-    const li = items[i];
-    li.hidden = false; li.classList.add("reveal", "running");
-    $("#replay-status").textContent = `Step ${i + 1} of ${items.length}: ${TOOL_LABEL[rec.steps[i].tool] || rec.steps[i].tool}…`;
-    li.scrollIntoView({block: "nearest", behavior: reduceMotion.matches ? "auto" : "smooth"});
-    i += 1;
-    replayTimer = setTimeout(next, 850);
-  };
-  next();
-}
-
-async function openInvestigation(id, opener) {
-  lastOpener = opener;
-  const rec = await get(`/api/investigations/${encodeURIComponent(id)}`);
-  current = rec;
-  const [name] = SIGNAL[rec.signal] || [rec.signal];
-  $("#inv-kicker").textContent = `Investigation · alert at ${hm(rec.start_minute)} UTC`;
-  $("#inv-title").textContent = `Why did ${rec.line_id} ${name.toLowerCase()} alarm?`;
-  $("#steps").innerHTML = rec.steps.map(stepHtml).join("");
-  $("#diag-host").innerHTML = "";
-  const dlg = $("#inv");
-  if (!dlg.open) { dlg.showModal(); requestAnimationFrame(() => dlg.setAttribute("data-open", "")); }
-  dlg.querySelector(".inv-body").scrollTop = 0; dlg.scrollTop = 0;
-  if (seen.has(id)) finishReplay(rec, false); else replay(rec);
-}
-
-function closeInvestigation() {
-  const dlg = $("#inv");
-  clearTimeout(replayTimer);
-  dlg.removeAttribute("data-open");
-  const done = () => { dlg.close(); lastOpener?.focus(); };
-  if (reduceMotion.matches) { done(); return; }
-  dlg.addEventListener("transitionend", done, {once: true});
-  setTimeout(() => dlg.open && done(), 260);   // in case transitionend never fires
-}
-$("#inv-close").onclick = closeInvestigation;
-$("#inv").addEventListener("cancel", e => { e.preventDefault(); closeInvestigation(); });
-$("#inv").addEventListener("click", e => { if (e.target === $("#inv")) closeInvestigation(); });   // backdrop
-$("#replay-skip").onclick = () => current && finishReplay(current, false);
-
-function renderAccuracy(ev) {
-  if (!ev?.methods) { $("#acc-section").hidden = true; return; }
-  const m = ev.methods, rows = [
-    ["lookup", "Alarm lookup table: one cause per signal", false],
-    ["rules", "Deterministic investigator", !m.llm],
-    ["llm", `LLM investigation agent (${ev.llm_model || "LLM"})`, true],
-  ].filter(([k]) => m[k]?.n);
-  $("#acc-section").hidden = false;
-  const tc = m.lookup.by_cause.thermocouple_drift;
-  $("#acc").innerHTML = `<p>Scored on ${int(ev.days)} random simulated days with ${int(ev.incidents)} injected incidents, each with a known root cause.
-    Reading the alarm alone works when the alarm's signal is the cause; it got all ${int(tc.n)} drifting thermocouples wrong, the case where
-    adjusting the burner would make things worse.</p>` +
-    rows.map(([k, label, agent]) => `<div class="bar${agent ? " agent" : ""}"><span>${esc(label)}</span>
-      <span class="track"><span class="fill" style="width:${(100 * m[k].rate).toFixed(1)}%"></span></span>
-      <span class="v">${int(m[k].correct)} / ${int(m[k].n)}</span></div>`).join("") +
-    (m.llm ? "" : `<p class="note-s">The LLM agent's score appears here once it has been evaluated with an API key (see the README).</p>`);
-}
-
-function showError(e) { $("#error").hidden = false; $("#error").textContent = e.message; }
-
-async function load() {
-  try {
-    const optional = path => get(path).catch(() => null);   // investigations may not have been generated yet
-    const [health, lines, alerts, shifts, dq, handover, invs, evaluation] = await Promise.all([
-      ...["/health", "/api/lines", "/api/alerts?limit=50", "/api/shifts", "/api/data-quality", "/api/handover"].map(get),
-      optional("/api/investigations"), optional("/api/investigations/evaluation")]);
-    $("#error").hidden = true;
-    investigations = new Map((invs || []).map(r => [r.alert_id, r]));
-    lastAlerts = alerts;
-    renderAccuracy(evaluation);
-    $("#mode").textContent = {databricks: "Live from Databricks SQL", snapshot: "Snapshot"}[health.mode] || "Local data";
-    const keepLine = $("#sel-line").value;
-    renderHero(lines, alerts); renderLines(lines); renderAlerts(alerts); renderShifts(shifts); renderDq(dq);
-    if (!notes.length) renderHandover(handover);
-    if (keepLine) $("#sel-line").value = keepLine;
-    else if (alerts[0]) { $("#sel-line").value = alerts[0].line_id; $("#sel-signal").value = alerts[0].signal; }
-    await drawChart();
-  } catch (e) { showError(e); }
 }
 ["#sel-line", "#sel-signal", "#sel-window"].forEach(s => $(s).onchange = () => drawChart().catch(showError));
 window.addEventListener("resize", () => drawChart().catch(() => {}));
 
+// ---------- routing: #overview, #incidents/<alert_id>, #shifts, #quality
+function route() {
+  const [view, arg] = (location.hash.slice(1) || "overview").split("/");
+  const v = VIEW_NAME[view] ? view : "overview";
+  document.querySelectorAll("[data-view]").forEach(s => s.hidden = s.dataset.view !== v);
+  document.querySelectorAll("[data-nav]").forEach(a => { if (a.dataset.nav === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  $("#view-name").textContent = VIEW_NAME[v];
+  $(".split").classList.toggle("has-pick", v === "incidents" && !!arg);
+  if (v === "incidents") renderIncident(arg ? decodeURIComponent(arg) : S.incidents[0]?.id).catch(showError);
+  if (v === "shifts") drawChart().catch(showError);
+}
+window.addEventListener("hashchange", route);
+
+async function load(first) {
+  try {
+    const optional = p => get(p).catch(() => null);   // agent outputs may not exist yet
+    const [health, lines, alerts, shifts, dq, handover, invs, evaluation] = await Promise.all([
+      ...["/health", "/api/lines", "/api/alerts?limit=500", "/api/shifts", "/api/data-quality", "/api/handover"].map(get),
+      optional("/api/investigations"), optional("/api/investigations/evaluation")]);
+    $("#error").hidden = true;
+    Object.assign(S, {lines, alerts, shifts, dq, notes: handover || [], evaluation});
+    S.invs = new Map((invs || []).map(r => [r.alert_id, r]));
+    S.incidents = groupIncidents(alerts);
+    const ts = shifts.flatMap(k => [Date.parse(k.first_ts), Date.parse(k.last_ts)]).filter(Number.isFinite);
+    S.range = ts.length ? {start: Math.floor(Math.min(...ts) / 36e5) * 36e5, end: Math.ceil(Math.max(...ts) / 36e5) * 36e5} : null;
+    $("#mode").innerHTML = `<span class="dot"></span>${{databricks: "Live from Databricks", snapshot: "Snapshot"}[health.mode] || "Local data"}`;
+    if (lines[0]) $("#asof").textContent = "Data to " + new Date(lines[0].as_of).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+    renderOverview(); renderHandover(); renderAccuracy(); renderShifts(); renderDq();
+    if (first) route();
+    else if (!$("[data-view=incidents]").hidden) renderIncidentList(current?.alert_id);
+  } catch (e) { showError(e); }
+}
+
 if (STATIC) {
-  const sc = STATIC.scorecard;
   $("#snapshot").hidden = false;
-  $("#snapshot").innerHTML = `This is a snapshot of a ${STATIC.hours}-hour simulated run${STATIC.matches_live ? ", identical to the run on Databricks" : ""}. ` +
-    `${sc.detected} of ${sc.faults} injected faults were caught, on average ${sc.mean_latency_min} minutes after they started, with ${sc.false_alarms} false alarms. ` +
-    `Press <b>Investigate</b> on an alert to replay how the agent worked out its cause. <a href="${STATIC.repo}">How it works</a>`;
+  $("#snapshot").innerHTML = `A snapshot of a ${STATIC.hours}-hour simulated run${STATIC.matches_live ? ", identical to the run on Databricks" : ""}. ` +
+    `Open an incident to see how the agent worked out its cause. <a href="${STATIC.repo}">How it works</a>`;
   $("#sel-window").value = "1440";
-  load();
+  load(true);
 } else {
-  load();
-  setInterval(load, 30000);
+  load(true);
+  setInterval(() => load(false), 30000);
 }
 </script>
 </body>

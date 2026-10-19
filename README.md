@@ -8,8 +8,8 @@ lakehouse that turns line telemetry into drift alerts, shift KPIs and recall-rea
 lot lists, served by a .NET 8 API and dashboard. Runs entirely on free tiers.
 
 **[Open the live demo](https://feliciachen01.github.io/linepulse/)**: a static snapshot of the
-dashboard over 24 simulated hours, identical to the run on Databricks. Press **Investigate** on any alert to replay how the agent
-worked out its cause.
+dashboard over 24 simulated hours, identical to the run on Databricks. Open any incident to see the agent's diagnosis and replay how it
+worked it out.
 
 [![The investigation agent's diagnosis of an oven alarm: a drifting thermocouple, not a burner fault, because the product did not change](docs/investigation.png)](https://feliciachen01.github.io/linepulse/)
 
@@ -150,7 +150,7 @@ oven alone. In the simulated day, two lines alarm on a hot oven within 20 minute
 L1 the oven is fine and its thermocouple is drifting; on L2 the belt is slowing down. Adjusting
 either burner would make things worse.
 
-![Alert list: each alert shows its probable cause and an Investigate button](docs/alerts.png)
+![Incidents over 24 hours on both lines, coloured by the root cause the agent found](docs/alerts.png)
 
 **How it works** (`src/linepulse/investigate.py`):
 
